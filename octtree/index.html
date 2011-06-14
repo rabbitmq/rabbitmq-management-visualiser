@@ -4,7 +4,7 @@
 <title>Learning WebGL &mdash; lesson 3</title>
 <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
 
-<script type="text/javascript" src="glMatrix-0.9.5.min.js"></script>
+<script type="text/javascript" src="glMatrix-min.js"></script>
 <script type="text/javascript" src="webgl-utils.js"></script>
 <script type="text/javascript" src="octtree.js"></script>
 
@@ -153,55 +153,51 @@
     var objs = new Array();
 
     function objs_to_vertices() {
-    	for (var c = 0; c < 4; ++c) {
-    	    vertices[c*3] = objs[c].x;
-    	    vertices[(c*3)+1] = objs[c].y;
-    	    vertices[(c*3)+2] = objs[c].z;
+    	for (var c = 0; c < objs.length; ++c) {
+            vertices[c*3] = objs[c].pos[0];
+            vertices[(c*3)+1] = objs[c].pos[1];
+            vertices[(c*3)+2] = objs[c].pos[2];
     	}
     }
     
     function initBuffers() {
+    	var v = vec3.create();
+        v[0] = 0;
+        v[1] = 0;
+        v[2] = 0;
     	for (var c = 0; c < 4; ++c) {
     		var obj = new Object();
-    		obj.x = 0.0;
-    		obj.y = 0.0;
-    		obj.z = 0.0;
-            obj.next_x = 0.0;
-            obj.next_y = 0.0;
-            obj.next_z = 0.0;
-            obj.vx = 0.0;
-            obj.vy = 0.0;
-            obj.vz = 0.0;
+    		obj.pos = vec3.create(v);
+    		obj.next_pos = vec3.create(v);
+    	    obj.velocity = vec3.create(v);
     		objs.push(obj);
     	}
         squareVertexPositionBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexPositionBuffer);
-        objs[0].x =  1.0;  objs[0].y =  1.0;  objs[0].z = 1.0;
-        objs[1].x = -1.0;  objs[1].y =  1.0;  objs[1].z = 2.0;
-        objs[2].x =  1.0;  objs[2].y = -1.0;  objs[2].z = 3.0;
-        objs[3].x = -1.0;  objs[3].y = -1.0;  objs[3].z = 4.0;
+        objs[0].pos[0] =  1.0;  objs[0].pos[1] =  1.0;  objs[0].pos[2] = -11.0;
+        objs[1].pos[0] = -1.0;  objs[1].pos[1] =  1.0;  objs[1].pos[2] = -10.0;
+        objs[2].pos[0] =  1.0;  objs[2].pos[1] = -1.0;  objs[2].pos[2] = -10.0;
+        objs[3].pos[0] = -1.0;  objs[3].pos[1] = -1.0;  objs[3].pos[2] = -10.0;
         objs_to_vertices();
-        for (var c = 0; c < 4; ++c) {
+        for (var c = 0; c < objs.length; ++c) {
         	tree.add(objs[c]);
         }
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
         squareVertexPositionBuffer.itemSize = 3;
-        squareVertexPositionBuffer.numItems = 4;
+        squareVertexPositionBuffer.numItems = objs.length;
 
         squareVertexColorBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexColorBuffer);
         colors = []
-        for (var i=0; i < 4; i++) {
+        for (var i=0; i < objs.length; i++) {
             colors = colors.concat([0.5, 0.5, 1.0, 1.0]);
         }
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
         squareVertexColorBuffer.itemSize = 4;
-        squareVertexColorBuffer.numItems = 4;
+        squareVertexColorBuffer.numItems = squareVertexPositionBuffer.numItems;
     }
 
 
-
-    var rSquare = 0;
 
     function drawScene() {
         gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
@@ -214,7 +210,6 @@
         mat4.translate(mvMatrix, [0.0, 0.0, -7.0]);
 
         mvPushMatrix();
-        mat4.rotate(mvMatrix, degToRad(rSquare), [1, 0, 0]);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexPositionBuffer);
         objs_to_vertices();
@@ -232,43 +227,34 @@
 
 
     var lastTime = 0;
-    var friction = 0.95;
+    var friction = 100;
 
     function animate() {
         var timeNow = new Date().getTime();
+        var incr;
+        var vecOP = vec3.create();
+        var distanceOP = 0;
         if (lastTime != 0) {
             var elapsed = (timeNow - lastTime) / 1000000;
+            //document.write(" " + elapsed);
             for (var c = 0; c < 4; ++c) {
             	var o = objs[c];
             	var found = new Array();
-                o.vx *= friction;
-                o.vy *= friction;
-                o.vz *= friction;
-                o.next_x = o.x + (o.vx * elapsed);
-                o.next_y = o.y + (o.vy * elapsed);
-                o.next_z = o.z + (o.vz * elapsed);
-                tree.find(o, 5, found);
+            	vec3.scale(o.velocity, 1 - (friction * elapsed));
+            	incr = vec3.create(o.velocity);
+            	vec3.scale(incr, elapsed);
+            	vec3.add(o.pos, incr, o.next_pos)
+                tree.find(o.pos, 10, found);
                 for (var d = 0; d < found.length; ++d) {
                 	var p = found[d].value;
                 	if (p != o) {
-                		var s = o.x - p.x;
-                		if (0 > s) {
-                            o.vx += 1/(s*s);
-                        } else if (0 < s) {
-                            o.vx -= 1/(s*s);
-                        }
-                		s = o.y - p.y;
-                        if (0 > s) {
-                            o.vy += 1/(s*s);
-                        } else if (0 < s) {
-                            o.vy -= 1/(s*s);
-                        }
-                        s = o.z - p.z;
-                        if (0 > s) {
-                            o.vz += 1/(s*s);
-                        } else if (0 < s) {
-                            o.vz -= 1/(s*s);
-                        }
+                		vec3.subtract(p.pos, o.pos, vecOP);
+                		distanceOP = vec3.length(vecOP);
+                		//document.write("" + vec3.str(vecOP) + " ("+distanceOP+"); ");
+                		if ((!(isNaN(distanceOP))) && 0 != distanceOP) {
+                			vec3.scale(vecOP, 1/(distanceOP*distanceOP));
+                			vec3.add(o.velocity, vecOP);
+                		}
                 	}
                 }
             }

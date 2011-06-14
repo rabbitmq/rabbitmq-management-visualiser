@@ -48,9 +48,9 @@ function find4(pos, radius, radiusSq, acc) {
 		}
 
 		if (tree.has_value()) {
-			var xd = Math.abs(tree.value.x - pos.x);
-			var yd = Math.abs(tree.value.y - pos.y);
-			var zd = Math.abs(tree.value.z - pos.z);
+			var xd = Math.abs(tree.value.pos[0] - pos[0]);
+			var yd = Math.abs(tree.value.pos[1] - pos[1]);
+			var zd = Math.abs(tree.value.pos[2] - pos[2]);
 			xd *= xd;
 			yd *= yd;
 			zd *= zd;
@@ -60,12 +60,12 @@ function find4(pos, radius, radiusSq, acc) {
 			continue;
 		}
 
-		x_p_r = pos.x + radius;
-		x_m_r = pos.x - radius;
-		y_p_r = pos.y + radius;
-		y_m_r = pos.y - radius;
-		z_p_r = pos.z + radius;
-		z_m_r = pos.z - radius;
+		x_p_r = pos[0] + radius;
+		x_m_r = pos[0] - radius;
+		y_p_r = pos[1] + radius;
+		y_m_r = pos[1] - radius;
+		z_p_r = pos[2] + radius;
+		z_m_r = pos[2] - radius;
 
 		if (x_p_r < tree.xMin || tree.xMax <= x_m_r || y_p_r < tree.yMin
 				|| tree.yMax <= y_m_r || z_p_r < tree.zMin
@@ -123,8 +123,9 @@ function add(e) {
 			tree = worklist.shift();
 		}
 
-		if (v.x < tree.xMin || tree.xMax <= v.x || v.y < tree.yMin
-				|| tree.yMax <= v.y || v.z < tree.zMin || tree.zMax <= v.z) {
+		if (v.pos[0] < tree.xMin || tree.xMax <= v.pos[0]
+				|| v.pos[1] < tree.yMin || tree.yMax <= v.pos[1]
+				|| v.pos[2] < tree.zMin || tree.zMax <= v.pos[2]) {
 			// if the value is outside the root, then it'll just get silently
 			// ignored. This is "safe".
 			tree = tree.parent;
@@ -132,8 +133,8 @@ function add(e) {
 		}
 
 		if (tree.is_empty()
-				|| (tree.has_value() && v.x == tree.value.x
-						&& v.y == tree.value.y && v.z == tree.value.z)) {
+				|| (tree.has_value() && v.pos[0] == tree.value.pos[0]
+						&& v.pos[1] == tree.value.pos[1] && v.pos[2] == tree.value.pos[2])) {
 			tree.value = v;
 			tree = undefined;
 			continue;
@@ -163,29 +164,29 @@ function add(e) {
 			tree.value = undefined;
 		}
 
-		if (v.x < tree.xMid) {
-			if (v.y < tree.yMid) {
-				if (v.z < tree.zMid) {
+		if (v.pos[0] < tree.xMid) {
+			if (v.pos[1] < tree.yMid) {
+				if (v.pos[2] < tree.zMid) {
 					tree = tree.bot_sw;
 				} else {
 					tree = tree.bot_nw;
 				}
 			} else {
-				if (v.z < tree.zMid) {
+				if (v.pos[2] < tree.zMid) {
 					tree = tree.top_sw;
 				} else {
 					tree = tree.top_nw;
 				}
 			}
 		} else {
-			if (v.y < tree.yMid) {
-				if (v.z < tree.zMid) {
+			if (v.pos[1] < tree.yMid) {
+				if (v.pos[2] < tree.zMid) {
 					tree = tree.bot_se;
 				} else {
 					tree = tree.bot_ne;
 				}
 			} else {
-				if (v.z < tree.zMid) {
+				if (v.pos[2] < tree.zMid) {
 					tree = tree.top_se;
 				} else {
 					tree = tree.top_ne;
@@ -201,7 +202,7 @@ function del(e) {
 
 function del_inner(tree, worklist) {
 	for ( var c = 0; c < worklist.length; ++c) {
-		tree1 = del_inner1(tree, worklist);
+		tree1 = del_inner1(tree, worklist[c]);
 		if (!(undefined == tree1)) {
 			tree = tree1;
 		}
@@ -212,10 +213,10 @@ function del_inner(tree, worklist) {
 function del_inner1(tree, v) {
 	var changed = false;
 
-	while (!(undefined == tree)) {
+	while (true) {
 		if (tree.has_value()) {
-			if (v.x == tree.value.x && v.y == tree.value.y
-					&& v.z == tree.value.z) {
+			if (v.pos[0] == tree.value.pos[0] && v.pos[1] == tree.value.pos[1]
+					&& v.pos[2] == tree.value.pos[2]) {
 				tree.value = undefined;
 				changed = true;
 			}
@@ -223,33 +224,34 @@ function del_inner1(tree, v) {
 		} else if (tree.is_empty()) {
 			break;
 		} else {
-			if (v.x < tree.xMin || tree.xMax <= v.x || v.y < tree.yMin
-					|| tree.yMax <= v.y || v.z < tree.zMin || tree.zMax <= v.z) {
+			if (v.pos[0] < tree.xMin || tree.xMax <= v.pos[0]
+					|| v.pos[1] < tree.yMin || tree.yMax <= v.pos[1]
+					|| v.pos[2] < tree.zMin || tree.zMax <= v.pos[2]) {
 				tree = tree.parent;
 			} else {
-				if (v.x < tree.xMid) {
-					if (v.y < tree.yMid) {
-						if (v.z < tree.zMid) {
+				if (v.pos[0] < tree.xMid) {
+					if (v.pos[1] < tree.yMid) {
+						if (v.pos[2] < tree.zMid) {
 							tree = tree.bot_sw;
 						} else {
 							tree = tree.bot_nw;
 						}
 					} else {
-						if (v.z < tree.zMid) {
+						if (v.pos[2] < tree.zMid) {
 							tree = tree.top_sw;
 						} else {
 							tree = tree.top_nw;
 						}
 					}
 				} else {
-					if (v.y < tree.yMid) {
-						if (v.z < tree.zMid) {
+					if (v.pos[1] < tree.yMid) {
+						if (v.pos[2] < tree.zMid) {
 							tree = tree.bot_se;
 						} else {
 							tree = tree.bot_ne;
 						}
 					} else {
-						if (v.z < tree.zMid) {
+						if (v.pos[2] < tree.zMid) {
 							tree = tree.top_se;
 						} else {
 							tree = tree.top_ne;
@@ -343,12 +345,10 @@ function update() {
 		if (tree == this || !(tree.parent == undefined)) {
 			if (tree.has_value()) {
 				v = tree.value;
-				v.x = v.next_x;
-				v.y = v.next_y;
-				v.z = v.next_z;
-				if (v.x < tree.xMin || tree.xMax <= v.x || v.y < tree.yMin
-						|| tree.yMax <= v.y || v.z < tree.zMin
-						|| tree.zMax <= v.z) {
+				v.pos = v.next_pos;
+				if (v.pos[0] < tree.xMin || tree.xMax <= v.pos[0]
+						|| v.pos[1] < tree.yMin || tree.yMax <= v.pos[1]
+						|| v.pos[2] < tree.zMin || tree.zMax <= v.pos[2]) {
 					tree = tree.del(v);
 					tree.add(v);
 				}
