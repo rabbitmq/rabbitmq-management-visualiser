@@ -1,0 +1,45 @@
+<html>
+<head>
+<script type="text/javascript" src="octtree.js"></script>
+<script type="text/javascript">
+var objs = new Array();
+var objCount = 10000;
+for (var i = 0; i < objCount; ++i) {
+	var o = new Object();
+    o.x = (2000 * Math.random()) - 1000;
+    o.y = (2000 * Math.random()) - 1000;
+    o.z = (2000 * Math.random()) - 1000;
+    objs.push(o);
+}
+var tree = undefined;
+var elapsed = 0;
+for (var c = 0; c < 10; ++c) {
+    tree = new Octtree(-10000, 10000, -10000, 10000, -10000, 10000, undefined);
+    var start = (new Date).getTime();
+    for (var i = 0; i < objs.length; ++i) {
+        tree.add(objs[i]);
+    }
+    var end = (new Date).getTime();
+    elapsed += (end - start);
+}
+document.write("Insert objects: " + (elapsed / 10) + "ms per " + objCount + " objs <br />\n");
+var results = new Array();
+elapsed = 0;
+for (var c = 0; c < 10; ++c) {
+	var o = new Object();
+	o.x = 0; o.y = 0; o.z = 0;
+    var start = (new Date).getTime();
+	for (var i = 0; i < objs.length; ++i) {
+		tree.find(objs[i], 100, results);
+	}
+    var end = (new Date).getTime();
+    elapsed += (end - start);
+}
+document.write("Queries: " + (elapsed / (10 * objCount)) +
+	    "ms/query each query found " + (results.length / (10 * objCount)) +
+	    " objects<br />\n");
+</script>
+</head>
+<body>
+</body>
+</html>
