@@ -154,9 +154,12 @@
 
     function objs_to_vertices() {
     	for (var c = 0; c < objs.length; ++c) {
-            vertices[c*3] = objs[c].pos[0];
-            vertices[(c*3)+1] = objs[c].pos[1];
-            vertices[(c*3)+2] = objs[c].pos[2];
+            vertices[c*6] = objs[c].pos[0];
+            vertices[(c*6)+1] = objs[c].pos[1];
+            vertices[(c*6)+2] = objs[c].pos[2];
+            vertices[(c*6)+3] = objs[c].pos[0] + 0.05;
+            vertices[(c*6)+4] = objs[c].pos[1];
+            vertices[(c*6)+5] = objs[c].pos[2];
     	}
     }
     
@@ -165,31 +168,34 @@
         v[0] = 0;
         v[1] = 0;
         v[2] = 0;
-    	for (var c = 0; c < 4; ++c) {
+    	for (var c = 0; c < 500; ++c) {
     		var obj = new Object();
     		obj.pos = vec3.create(v);
-    		obj.next_pos = vec3.create(v);
+            obj.pos[0] = (6 * Math.random()) - 3;
+            obj.pos[1] = (6 * Math.random()) - 3;
+            obj.pos[2] = (6 * Math.random()) - 3;
+    		obj.next_pos = vec3.create(obj.pos);
     	    obj.velocity = vec3.create(v);
     		objs.push(obj);
-    	}
+     	}
         squareVertexPositionBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexPositionBuffer);
-        objs[0].pos[0] =  1.0;  objs[0].pos[1] =  1.0;  objs[0].pos[2] = -11.0;
-        objs[1].pos[0] = -1.0;  objs[1].pos[1] =  1.0;  objs[1].pos[2] = -10.0;
-        objs[2].pos[0] =  1.0;  objs[2].pos[1] = -1.0;  objs[2].pos[2] = -10.0;
-        objs[3].pos[0] = -1.0;  objs[3].pos[1] = -1.0;  objs[3].pos[2] = -10.0;
+//        objs[0].pos[0] =  1.0;  objs[0].pos[1] =  1.0;  objs[0].pos[2] = -11.0;
+//        objs[1].pos[0] = -1.0;  objs[1].pos[1] =  1.0;  objs[1].pos[2] = -10.0;
+//        objs[2].pos[0] =  1.0;  objs[2].pos[1] = -1.0;  objs[2].pos[2] = -10.0;
+//        objs[3].pos[0] = -1.0;  objs[3].pos[1] = -1.0;  objs[3].pos[2] = -10.0;
         objs_to_vertices();
         for (var c = 0; c < objs.length; ++c) {
         	tree.add(objs[c]);
         }
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
         squareVertexPositionBuffer.itemSize = 3;
-        squareVertexPositionBuffer.numItems = objs.length;
+        squareVertexPositionBuffer.numItems = 2*objs.length;
 
         squareVertexColorBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexColorBuffer);
         colors = []
-        for (var i=0; i < objs.length; i++) {
+        for (var i=0; i < vertices.length; i++) {
             colors = colors.concat([0.5, 0.5, 1.0, 1.0]);
         }
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
@@ -220,7 +226,7 @@
         gl.vertexAttribPointer(shaderProgram.vertexColorAttribute, squareVertexColorBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
         setMatrixUniforms();
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, squareVertexPositionBuffer.numItems);
+        gl.drawArrays(gl.LINES, 0, squareVertexPositionBuffer.numItems);
 
         mvPopMatrix();
     }
@@ -236,21 +242,19 @@
         var distanceOP = 0;
         if (lastTime != 0) {
             var elapsed = (timeNow - lastTime) / 1000000;
-            //document.write(" " + elapsed);
-            for (var c = 0; c < 4; ++c) {
+            for (var c = 0; c < objs.length; ++c) {
             	var o = objs[c];
             	var found = new Array();
             	vec3.scale(o.velocity, 1 - (friction * elapsed));
             	incr = vec3.create(o.velocity);
             	vec3.scale(incr, elapsed);
             	vec3.add(o.pos, incr, o.next_pos)
-                tree.find(o.pos, 10, found);
+                tree.find(o.pos, 5, found);
                 for (var d = 0; d < found.length; ++d) {
                 	var p = found[d].value;
                 	if (p != o) {
                 		vec3.subtract(p.pos, o.pos, vecOP);
                 		distanceOP = vec3.length(vecOP);
-                		//document.write("" + vec3.str(vecOP) + " ("+distanceOP+"); ");
                 		if ((!(isNaN(distanceOP))) && 0 != distanceOP) {
                 			vec3.scale(vecOP, 1/(distanceOP*distanceOP));
                 			vec3.add(o.velocity, vecOP);
