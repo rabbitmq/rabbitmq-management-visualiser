@@ -153,6 +153,7 @@
     var objs = new Array();
 
     function objs_to_vertices() {
+    	vertices.length = 0;
     	for (var c = 0; c < objs.length; ++c) {
             vertices[c*6] = objs[c].pos[0];
             vertices[(c*6)+1] = objs[c].pos[1];
@@ -168,7 +169,7 @@
         v[0] = 0;
         v[1] = 0;
         v[2] = 0;
-    	for (var c = 0; c < 500; ++c) {
+    	for (var c = 0; c < 100; ++c) {
     		var obj = new Object();
     		obj.pos = vec3.create(v);
             obj.pos[0] = (6 * Math.random()) - 3;
@@ -176,7 +177,8 @@
             obj.pos[2] = (6 * Math.random()) - 3;
     		obj.next_pos = vec3.create(obj.pos);
     	    obj.velocity = vec3.create(v);
-    		objs.push(obj);
+    	    obj.mass = 1 + (20*Math.random());
+    		objs[c] = obj;
      	}
         squareVertexPositionBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexPositionBuffer);
@@ -195,8 +197,9 @@
         squareVertexColorBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexColorBuffer);
         colors = []
-        for (var i=0; i < vertices.length; i++) {
-            colors = colors.concat([0.5, 0.5, 1.0, 1.0]);
+        for (var i=0; i < objs.length; i++) {
+        	var c = (objs[i].mass - 1)/20;
+            colors = colors.concat([c, 1-c, 0, 1.0, c, 1-c, 0, 1.0]);
         }
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
         squareVertexColorBuffer.itemSize = 4;
@@ -256,13 +259,14 @@
                 		vec3.subtract(p.pos, o.pos, vecOP);
                 		distanceOP = vec3.length(vecOP);
                 		if ((!(isNaN(distanceOP))) && 0 != distanceOP) {
-                			vec3.scale(vecOP, 1/(distanceOP*distanceOP));
+                			vec3.scale(vecOP, p.mass/(10*distanceOP*distanceOP));
                 			vec3.add(o.velocity, vecOP);
                 		}
                 	}
                 }
             }
             tree.update();
+            //document.write("" + tree.size());
         }
         lastTime = timeNow;
     }
