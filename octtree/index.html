@@ -169,7 +169,7 @@
         v[0] = 0;
         v[1] = 0;
         v[2] = 0;
-    	for (var c = 0; c < 150; ++c) {
+    	for (var c = 0; c < 300; ++c) {
     		var obj = new Object();
     		obj.pos = vec3.create(v);
             obj.pos[0] = (6 * Math.random()) - 3;
@@ -251,7 +251,7 @@
             	incr = vec3.create(o.velocity);
             	vec3.scale(incr, elapsed);
             	vec3.add(o.pos, incr, o.next_pos)
-                var found = tree.findInRadius(o.pos, 2);
+                var found = tree.findInRadius(o.pos, 5, 8);
                 for (var d = 0; d < found.length; ++d) {
                 	var p = found[d].value;
                 	if (p != o) {
