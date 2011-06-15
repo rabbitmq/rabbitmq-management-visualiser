@@ -10,10 +10,16 @@ octtree.bot_sw = 7;
 octtree.children = [ octtree.top_nw, octtree.top_ne, octtree.top_se,
         octtree.top_sw, octtree.bot_nw, octtree.bot_ne, octtree.bot_se,
         octtree.bot_sw ];
-octtree.firstChild = 0;
+octtree.firstChildId = 0;
 octtree.x = 0;
 octtree.y = 1;
 octtree.z = 2;
+octtree.randoms = new Array();
+octtree.randomIndex = 0;
+
+for ( var i = 0; i < 100; ++i) {
+    octtree.randoms.push(Math.random());
+};
 
 octtree.findNode = function(tree, pos) {
     while (true) {
@@ -171,7 +177,10 @@ octtree.del = function(tree, value) {
 
 octtree.next = function(tree) {
     while (undefined != tree) {
-        var nextChildId = (tree.childId + 1) % octtree.children.length;
+        var nextChildId = (tree.childId + 1);
+        if (nextChildId == octtree.children.length) {
+            nextChildId = octtree.firstChildId;
+        }
         if (nextChildId > tree.childId && undefined != tree.parent) {
             return tree.parent[nextChildId];
         } else {
@@ -211,7 +220,7 @@ octtree.update = function(tree) {
             }
             tree = octtree.next(tree);
         } else if (tree.hasChildren()) {
-            tree = tree[octtree.firstChild];
+            tree = tree[octtree.firstChildId];
         } else {
             tree = octtree.next(tree);
         }
@@ -328,7 +337,7 @@ octtree.size = function(tree) {
             count++;
             tree = octtree.next(tree);
         } else if (tree.hasChildren()) {
-            tree = tree[octtree.firstChild];
+            tree = tree[octtree.firstChildId];
         } else {
             tree = octtree.next(tree);
         }
@@ -343,12 +352,21 @@ octtree.create = function(xMin, xMax, yMin, yMax, zMin, zMax) {
 };
 
 octtree.randomPush = function(ary, e) {
-    if (Math.random() > 0.5) {
+    if (octtree.nextRandom() > 0.5) {
         ary.push(e);
     } else {
         ary.unshift(e);
     }
     return ary;
+};
+
+octtree.nextRandom = function() {
+    var r = octtree.randoms[octtree.randomIndex];
+    octtree.randomIndex++;
+    if (octtree.randomIndex == octtree.randoms.length) {
+        octtree.randomIndex = 0;
+    }
+    return r;
 };
 
 function Octtree(xMin, xMax, yMin, yMax, zMin, zMax, parent, childId) {
@@ -386,11 +404,11 @@ function Octtree(xMin, xMax, yMin, yMax, zMin, zMax, parent, childId) {
 };
 
 function isEmpty() {
-    return (undefined == this[octtree.firstChild]) && (undefined == this.value);
+    return (undefined == this[octtree.firstChildId]) && (undefined == this.value);
 }
 
 function hasChildren() {
-    return undefined != this[octtree.firstChild];
+    return undefined != this[octtree.firstChildId];
 }
 
 function hasValue() {
