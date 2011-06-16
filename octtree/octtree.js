@@ -11,6 +11,7 @@ octtree.children = [ octtree.top_nw, octtree.top_ne, octtree.top_se,
         octtree.top_sw, octtree.bot_nw, octtree.bot_ne, octtree.bot_se,
         octtree.bot_sw ];
 octtree.firstChildId = 0;
+octtree.lastChildId = 7;
 octtree.x = 0;
 octtree.y = 1;
 octtree.z = 2;
@@ -177,12 +178,8 @@ octtree.del = function(tree, value) {
 
 octtree.next = function(tree) {
     while (undefined != tree) {
-        var nextChildId = (tree.childId + 1);
-        if (nextChildId == octtree.children.length) {
-            nextChildId = octtree.firstChildId;
-        }
-        if (nextChildId > tree.childId && undefined != tree.parent) {
-            return tree.parent[nextChildId];
+        if (undefined != tree.nextSiblingId) {
+            return tree.parent[tree.nextSiblingId];
         } else {
             tree = tree.parent;
         }
@@ -378,6 +375,9 @@ function Octtree(xMin, xMax, yMin, yMax, zMin, zMax, parent, childId) {
     this.zMax = zMax;
     this.parent = parent;
     this.childId = childId;
+    if (undefined != childId && childId != octtree.lastChildId && undefined != parent) {
+    	this.nextSiblingId = childId + 1;
+    }
 
     this.xMid = xMin + (xMax - xMin) / 2;
     this.yMid = yMin + (yMax - yMin) / 2;
