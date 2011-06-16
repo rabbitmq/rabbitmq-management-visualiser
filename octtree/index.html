@@ -7,6 +7,7 @@
 <script type="text/javascript" src="glMatrix-min.js"></script>
 <script type="text/javascript" src="webgl-utils.js"></script>
 <script type="text/javascript" src="octtree.js"></script>
+<script type="text/javascript" src="gravity.js"></script>
 
 <script id="shader-fs" type="x-shader/x-fragment">
     #ifdef GL_ES
@@ -169,7 +170,7 @@
         v[0] = 0;
         v[1] = 0;
         v[2] = 0;
-    	for (var c = 0; c < 300; ++c) {
+    	for (var c = 0; c < 100; ++c) {
     		var obj = new Object();
     		obj.pos = vec3.create(v);
             obj.pos[0] = (6 * Math.random()) - 3;
@@ -236,36 +237,15 @@
 
 
     var lastTime = 0;
-    var friction = 100;
 
     function animate() {
         var timeNow = new Date().getTime();
         if (lastTime != 0) {
-            var incr;
-            var vecOP = vec3.create();
-            var distanceOP = 0;
             var elapsed = (timeNow - lastTime) / 1000000;
             for (var c = 0; c < objs.length; ++c) {
-            	var o = objs[c];
-            	vec3.scale(o.velocity, 1 - (friction * elapsed));
-            	incr = vec3.create(o.velocity);
-            	vec3.scale(incr, elapsed);
-            	vec3.add(o.pos, incr, o.next_pos)
-                var found = tree.findInRadius(o.pos, 5, 8);
-                for (var d = 0; d < found.length; ++d) {
-                	var p = found[d].value;
-                	if (p != o) {
-                		vec3.subtract(p.pos, o.pos, vecOP);
-                		distanceOP = vec3.length(vecOP);
-                		if ((!(isNaN(distanceOP))) && 0 != distanceOP) {
-                			vec3.scale(vecOP, p.mass/(20*distanceOP*distanceOP));
-                			vec3.add(o.velocity, vecOP);
-                		}
-                	}
-                }
+            	gravity.update(elapsed, tree, objs[c]);
             }
             tree.update();
-            //document.write(" " + tree.size());
         }
         lastTime = timeNow;
     }
