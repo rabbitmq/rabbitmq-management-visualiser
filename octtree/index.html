@@ -33,6 +33,7 @@
     void main(void) {
         gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
         vColor = aVertexColor;
+        vColor[2] = gl_Position[2] / 10.0;
     }
 </script>
 
@@ -175,10 +176,10 @@
     		obj.pos = vec3.create(v);
             obj.pos[0] = (6 * Math.random()) - 3;
             obj.pos[1] = (6 * Math.random()) - 3;
-            obj.pos[2] = 0;//(6 * Math.random()) - 3;
+            obj.pos[2] = (6 * Math.random()) - 3;
     		obj.next_pos = vec3.create(obj.pos);
     	    obj.velocity = vec3.create(v);
-    	    obj.mass = 1;// + (50*Math.random());
+    	    obj.mass = 1 + (50*Math.random());
     		objs[c] = obj;
      	}
         squareVertexPositionBuffer = gl.createBuffer();
