@@ -7,7 +7,7 @@
 <script type="text/javascript" src="glMatrix-min.js"></script>
 <script type="text/javascript" src="webgl-utils.js"></script>
 <script type="text/javascript" src="octtree.js"></script>
-<script type="text/javascript" src="gravity.js"></script>
+<script type="text/javascript" src="physics.js"></script>
 
 <script id="shader-fs" type="x-shader/x-fragment">
     #ifdef GL_ES
@@ -170,15 +170,15 @@
         v[0] = 0;
         v[1] = 0;
         v[2] = 0;
-    	for (var c = 0; c < 100; ++c) {
+    	for (var c = 0; c < 400; ++c) {
     		var obj = new Object();
     		obj.pos = vec3.create(v);
             obj.pos[0] = (6 * Math.random()) - 3;
             obj.pos[1] = (6 * Math.random()) - 3;
-            obj.pos[2] = (6 * Math.random()) - 3;
+            obj.pos[2] = 0;//(6 * Math.random()) - 3;
     		obj.next_pos = vec3.create(obj.pos);
     	    obj.velocity = vec3.create(v);
-    	    obj.mass = 1 + (50*Math.random());
+    	    obj.mass = 1;// + (50*Math.random());
     		objs[c] = obj;
      	}
         squareVertexPositionBuffer = gl.createBuffer();
@@ -242,8 +242,11 @@
         var timeNow = new Date().getTime();
         if (lastTime != 0) {
             var elapsed = (timeNow - lastTime) / 1000000;
+            var obj;
             for (var c = 0; c < objs.length; ++c) {
-            	gravity.update(elapsed, tree, objs[c]);
+            	obj = objs[c];
+            	newton.update(elapsed, obj);
+            	spring.update(elapsed, tree, obj);
             }
             tree.update();
         }
