@@ -1,7 +1,7 @@
 <html>
 
 <head>
-<title>Learning WebGL &mdash; lesson 3</title>
+<title>WebGL Demo</title>
 <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
 
 <script type="text/javascript" src="glMatrix-min.js"></script>
@@ -171,7 +171,7 @@
         v[0] = 0;
         v[1] = 0;
         v[2] = 0;
-    	for (var c = 0; c < 400; ++c) {
+    	for (var c = 0; c < 200; ++c) {
     		var obj = new Object();
     		obj.pos = vec3.create(v);
             obj.pos[0] = (6 * Math.random()) - 3;
@@ -184,10 +184,6 @@
      	}
         squareVertexPositionBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexPositionBuffer);
-//        objs[0].pos[0] =  1.0;  objs[0].pos[1] =  1.0;  objs[0].pos[2] = -11.0;
-//        objs[1].pos[0] = -1.0;  objs[1].pos[1] =  1.0;  objs[1].pos[2] = -10.0;
-//        objs[2].pos[0] =  1.0;  objs[2].pos[1] = -1.0;  objs[2].pos[2] = -10.0;
-//        objs[3].pos[0] = -1.0;  objs[3].pos[1] = -1.0;  objs[3].pos[2] = -10.0;
         objs_to_vertices();
         for (var c = 0; c < objs.length; ++c) {
         	tree.add(objs[c]);
@@ -247,7 +243,7 @@
             for (var c = 0; c < objs.length; ++c) {
             	obj = objs[c];
             	newton.update(elapsed, obj);
-            	spring.update(elapsed, tree, obj);
+            	gravity.update(elapsed, tree, obj);
             }
             tree.update();
         }
@@ -263,7 +259,7 @@
 
 
     function webGLStart() {
-        var canvas = document.getElementById("lesson03-canvas");
+        var canvas = document.getElementById("demo-canvas");
         initGL(canvas);
         initShaders()
         initBuffers();
@@ -280,12 +276,7 @@
 
 
 <body onload="webGLStart();">
-    <a href="http://learningwebgl.com/blog/?p=239">&lt;&lt; Back to Lesson 3</a><br />
-
-    <canvas id="lesson03-canvas" style="border: none;" width="500" height="500"></canvas>
-
-    <br/>
-    <a href="http://learningwebgl.com/blog/?p=239">&lt;&lt; Back to Lesson 3</a><br />
+    <canvas id="demo-canvas" style="border: none;" width="500" height="500"></canvas>
 </body>
 
 </html>
