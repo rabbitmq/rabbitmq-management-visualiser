@@ -1,0 +1,221 @@
+<html>
+
+<head>
+<title>RabbitMQ Topology Visualiser</title>
+<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+
+<script type="text/javascript" src="glMatrix-min.js"></script>
+<script type="text/javascript" src="octtree.js"></script>
+<script type="text/javascript" src="physics.js"></script>
+<script type="text/javascript">
+
+var updatePeriod = 1000; // 1 second
+
+var updateTimer = undefined;
+var client = new XMLHttpRequest();
+client.onreadystatechange = updateReady;
+
+var configuration = undefined;
+var vhost = "/";
+
+var model = {};
+model.exchanges = {};
+model.bindings = {};
+model.queues = {};
+model.connections = {};
+model.channels = {};
+
+var tree = octtree.create(0, 10000, 0, 10000, -1, 1);
+
+// all-configuration does not return default exchanges, nor transient things like channels and connections. Hence TODO: invent 'all' which really does return everything
+function update() {
+    client.open("GET", "/api/all-configuration");
+    client.send();
+};
+
+function updateReady() {
+    if (client.readyState == 4 && client.status == 200) {
+        updateTimer = setTimeout("update();", updatePeriod);
+        configuration = JSON.parse(client.responseText);
+        rebuildModel();
+    }
+};
+
+var exchange = { yMax: 0,
+                 yIncr: 50,
+                 xInit: 10,
+                 xOffset: 100,
+                 attributes: ['arguments', 'auto_delete', 'durable', 'internal', 'type']
+               };
+exchange.add = function(elem) {
+    model.exchanges[elem.name] = elem;
+    elem.pos = vec3.create();
+    elem.pos[octtree.x] = exchange.xInit;
+    elem.pos[octtree.y] = exchange.yMax;
+    elem.pos[octtree.z] = 0;
+    exchange.yMax += exchange.yIncr;
+    if (undefined != model.bindings.destination["exchange"][elem.name] &&
+        0 < model.bindings.destination["exchange"][elem.name].length) {
+            elem.pos[octtree.x] += exchange.xOffset;
+    }
+
+    elem.next_pos = vec3.create(elem.pos);
+    tree.add(elem);
+};
+exchange.update = function(elem) {
+    var e = model.exchanges[elem.name];
+    var attr;
+    for (var i = 0; i < exchange.attributes.length; ++i) {
+        attr = exchange.attributes[i];
+        e[attr] = elem[attr];
+    }
+};
+exchange.remove = function(elem) {
+    delete model.exchanges[elem.name];
+};
+
+var queue = { yMax: 0,
+              yIncr: 50,
+              xInit: 400,
+              attributes: ['arguments', 'auto_delete', 'durable']
+            };
+queue.add = function(elem) {
+    model.queues[elem.name] = elem;
+    elem.pos = vec3.create();
+    elem.pos[octtree.x] = queue.xInit;
+    elem.pos[octtree.y] = queue.yMax;
+    elem.pos[octtree.z] = 0;
+    queue.yMax += queue.yIncr;
+
+    elem.next_pos = vec3.create(elem.pos);
+    tree.add(elem);
+};
+queue.update = function(elem) {
+    var q = model.queues[elem.name];
+    var attr;
+    for (var i = 0; i < queue.attributes.length; ++i) {
+        attr = queue.attributes[i];
+        q[attr] = elem[attr];
+    }    
+};
+queue.remove = function(elem) {
+    delete model.queues[elem.name];
+};
+
+function rebuildModel() {
+    model.bindings.source = {};
+    model.bindings.destination = { "exchange": {}, "queue": {} };
+
+    var elem;
+    for (var i = 0; i < configuration.bindings.length; ++i) {
+        elem = configuration.bindings[i];
+        if (undefined == model.bindings.source[elem.source]) {
+            model.bindings.source[elem.source] = new Array(elem);
+        } else {
+            model.bindings.source[elem.source].push(elem);
+        }
+        
+        if (undefined == model.bindings.destination[elem.destination_type][elem.destination]) {
+            model.bindings.destination[elem.destination_type][elem.destination] = new Array(elem);
+        } else {
+            model.bindings.destination[elem.destination_type][elem.destination].push(elem);
+        }
+    }
+    
+    var matched = {};
+    for (var i = 0; i < configuration.exchanges.length; ++i) {
+        elem = configuration.exchanges[i];
+        if (elem.vhost == vhost) {
+            if (undefined == model.exchanges[elem.name]) {
+                exchange.add(elem);
+            } else {
+                exchange.update(elem);
+            }
+            matched[elem.name] = true;
+        }
+    }
+    for (var i in model.exchanges) {
+        if (undefined == matched[i]) {
+            exchange.remove(model.exchanges[i]);
+        }
+    }
+
+    matched = {};
+    for (var i = 0; i < configuration.queues.length; ++i) {
+        elem = configuration.queues[i];
+        if (elem.vhost == vhost) {
+            if (undefined == model.queues[elem.name]) {
+                queue.add(elem);
+            } else {
+                queue.update(elem);
+            }
+            matched[elem.name] = true;
+        }
+    }
+    for (var i in model.queues) {
+        if (undefined == matched[i]) {
+            queue.remove(model.queues[i]);
+        }
+    }
+
+    matched = undefined;
+};
+
+window.requestAnimFrame = (function() {
+    return window.requestAnimationFrame ||
+           window.webkitRequestAnimationFrame ||
+           window.mozRequestAnimationFrame ||
+           window.oRequestAnimationFrame ||
+           window.msRequestAnimationFrame ||
+           function(/* function FrameRequestCallback */ callback, /* DOMElement Element */ element) {
+             window.setTimeout(callback, 1000/60);
+           };
+  })();
+
+var ctx = undefined;
+
+function initCanvas(canvas) {
+    canvas.width = window.document.body.offsetWidth;
+    canvas.height = window.document.body.offsetHeight;
+    try {
+        ctx = canvas.getContext("2d");
+    } catch (e) {
+    }
+    if (!ctx) {
+        alert("Could not initialise 2D canvas. Change browser?");
+    }
+}
+
+var lastTime = 0;
+
+function drawScene() {
+};
+
+function animate() {
+    var timeNow = new Date().getTime();
+    if (lastTime != 0) {
+        var elapsed = (timeNow - lastTime) / 1000000;
+        tree.update();
+    }
+    lastTime = timeNow;
+};
+
+function tick() {
+    requestAnimFrame(tick);
+    drawScene();
+    animate();
+};
+
+function visualisationStart() {
+    var canvas = document.getElementById("topology-canvas");
+    initCanvas(canvas);
+    update();
+    tick();
+}
+
+</script>
+</head>
+<body onload="visualisationStart();">
+    <canvas id="topology-canvas"></canvas>
+</body>
+</html>
