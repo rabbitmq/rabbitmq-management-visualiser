@@ -32,9 +32,8 @@ var mouseDragOffsetVec = undefined;
 var highlight = "#ffffc0";
 var selected = undefined;
 
-// all-configuration does not return default exchanges, nor transient things like channels and connections. Hence TODO: invent 'all' which really does return everything
 function update() {
-    client.open("GET", "/api/all-configuration");
+    client.open("GET", "/api/all");
     client.send();
 };
 
@@ -50,7 +49,8 @@ var exchange = { yMax: 100,
                  yIncr: 50,
                  xInit: 100,
                  xOffset: 100,
-                 attributes: ['arguments', 'auto_delete', 'durable', 'internal', 'type']
+                 attributes: ['arguments', 'auto_delete', 'durable', 'internal', 'type'],
+                 pos: vec3.create()
                };
 exchange.add = function(elem) {
     model.exchanges[elem.name] = elem;
@@ -137,6 +137,17 @@ exchange.render = function(elem, ctx) {
     elem.xMin = elem.pos[octtree.x] - (dim.width/2) - 12;
     elem.xMax = elem.pos[octtree.x] + (dim.width/2) + 12;
 };
+exchange.animate = function(elapsed, elem) {
+    if (exchange.xInit * 2 > elem.pos[octtree.x]) {
+        exchange.pos[octtree.x] = exchange.xInit;
+        exchange.pos[octtree.y] = elem.pos[octtree.y];
+        spring.pull = true;
+        spring.push = false;
+        spring.dampingFactor = 0.1;
+        spring.equilibriumLength = 0;
+        spring.apply(elapsed, elem, exchange);
+    }
+};
 
 var queue = { yMax: 100,
               yIncr: 50,
@@ -193,8 +204,11 @@ queue.render = function(elem, ctx) {
     elem.xMin = elem.pos[octtree.x] - (dim.width/2) - 12;
     elem.xMax = elem.pos[octtree.x] + (dim.width/2) + 12;
 };
+queue.animate = function (elapsed, elem) {
+    // might want to do a snapping thing again as with exchanges
+};
 
-var binding = { offset: 100 };
+var binding = { offset: 150 };
 binding.render = function(elem, ctx) {
     var source = model.exchanges[elem.source];
     var destination;
@@ -213,7 +227,8 @@ binding.render = function(elem, ctx) {
     ctx.bezierCurveTo(xMid1, source.pos[octtree.y], xMid2, destination.pos[octtree.y],
             destination.xMin, destination.pos[octtree.y]);
     ctx.stroke();
-    
+
+    // draw an arrow head
     ctx.beginPath();
     ctx.moveTo(destination.xMin, destination.pos[octtree.y]);
     ctx.lineTo(destination.xMin - 12, destination.pos[octtree.y] + 6);
@@ -221,6 +236,18 @@ binding.render = function(elem, ctx) {
     ctx.closePath();
     ctx.fillStyle = "black";
     ctx.fill();
+    
+    // draw the binding key
+    var yMid = (source.pos[octtree.y] + destination.pos[octtree.y])/2;
+    ctx.font = "12px sans-serif";
+    ctx.textBaseline = "middle";
+    ctx.textAlign = "center";
+    ctx.lineWidth = 6.0;
+    ctx.strokeStyle = "white";
+    ctx.strokeText(elem.routing_key, xMid, yMid);
+    ctx.fillStyle = "black";
+    ctx.fillText(elem.routing_key, xMid, yMid);
+    
 };
 
 function draggable(elem, ctx) {
@@ -238,6 +265,7 @@ function draggable(elem, ctx) {
             vec3.set(mousePos, elem.next_pos);
             vec3.add(elem.next_pos, mouseDragOffsetVec);
             elem.velocity = vec3.create();
+            clamp(elem);
         } else if (!inPath) {
             selected = undefined;
             mouseDragOffsetVec = undefined;
@@ -341,7 +369,7 @@ function initCanvas(canvas) {
     canvas.width = window.document.body.offsetWidth;
     canvas.height = window.document.body.offsetHeight;
     canvas.onmousemove = mouseMove;
-    canvas.onmousedown = function (e) { mouseDown = true; };
+    canvas.onmousedown = function (e) { mouseDown = true; mouseDragOffsetVec = undefined; };
     canvas.onmouseup = function (e) { mouseDown = false; mouseDragOffsetVec = undefined; };
     try {
         ctx = canvas.getContext("2d");
@@ -361,13 +389,6 @@ function drawScene() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.strokeRect(0, 0, canvas.width, canvas.height);
     var e;
-    for (var i in model.bindings.source) {
-        var ary = model.bindings.source[i];
-        for (var j = 0; j < ary.length; ++j) {
-            e = ary[j];
-            binding.render(e, ctx);
-        }
-    }
     for (var i in model.exchanges) {
         e = model.exchanges[i];
         exchange.render(e, ctx);
@@ -376,11 +397,37 @@ function drawScene() {
         e = model.queues[i];
         queue.render(e, ctx);
     }
+    for (var i in model.bindings.source) {
+        var ary = model.bindings.source[i];
+        for (var j = 0; j < ary.length; ++j) {
+            e = ary[j];
+            binding.render(e, ctx);
+        }
+    }
+};
+
+function clamp(elem) {
+    if (elem.next_pos[octtree.x] < 1) {
+        elem.next_pos[octtree.x] = 1
+    };
+    if (elem.next_pos[octtree.y] < 1) {
+        elem.next_pos[octtree.y] = 1        
+    }
+    if (elem.next_pos[octtree.x] >= canvas.width) {
+        elem.next_pos[octtree.x] = canvas.width - 1;
+    };
+    if (elem.next_pos[octtree.y] >= (canvas.height - 100)) {
+        canvas.height += 100;
+    }
 };
 
 gravity.octtreeRadius = 500;
 gravity.bigG = 100;
 gravity.repel = true;
+
+spring.octtreeRadius = 500;
+spring.equilibriumLength = 50;
+spring.dampingFactor = 0.01;
 
 function animate() {
     var timeNow = new Date().getTime();
@@ -390,15 +437,27 @@ function animate() {
         for (var i in model.exchanges) {
             e = model.exchanges[i];
             if (undefined == selected || selected != e) {
+                exchange.animate(elapsed, e);
+                spring.dampingFactor = 0.01;
+                spring.equilibriumLength = 50;
+                spring.pull = false;
+                spring.push = true;
                 newton.update(elapsed, e);
-                gravity.update(elapsed, tree, e);
+                spring.update(elapsed, tree, e);
+                clamp(e);
             }
         }
         for (var i in model.queues) {
             e = model.queues[i];
             if (undefined == selected || selected != e) {
+                queue.animate(e);
+                spring.dampingFactor = 0.01;
+                spring.equilibriumLength = 50;
+                spring.pull = false;
+                spring.push = true;
                 newton.update(elapsed, e);
-                gravity.update(elapsed, tree, e);
+                spring.update(elapsed, tree, e);
+                clamp(e);
             }
         }
         tree.update();

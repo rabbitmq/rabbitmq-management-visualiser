@@ -17,6 +17,26 @@ spring.dampingFactor = 0.5;
 spring.octtreeRadius = 4;
 spring.octtreeLimit = 40;
 
+spring.apply = function(elapsed, obj1, obj2) {
+    var damper = spring.dampingFactor * elapsed * 100000;
+    var vecOP = vec3.create();
+    var distanceOP = 0;
+    var x = 0;
+    vec3.subtract(obj2.pos, obj1.pos, vecOP);
+    distanceOP = vec3.length(vecOP);
+    if (!isNaN(distanceOP) && 0 != distanceOP) {
+        x = distanceOP - spring.equilibriumLength;
+        if (distanceOP > spring.equilibriumLength && !spring.pull) {
+            return;
+        }
+        if (distanceOP < spring.equilibriumLength && !spring.push) {
+            return;
+        }
+        vec3.scale(vecOP,
+                (damper * (((1 / distanceOP) * x) / obj1.mass)));
+        vec3.add(obj1.velocity, vecOP);
+    }    
+};
 spring.update = function(elapsed, tree, obj) {
     var damper = spring.dampingFactor * elapsed * 100000;
     var vecOP = vec3.create();
