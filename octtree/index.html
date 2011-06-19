@@ -26,6 +26,11 @@ model.connections = {};
 model.channels = {};
 
 var tree = octtree.create(0, 10000, 0, 10000, -1, 1);
+var mousePos = vec3.create();
+var mouseDown = false;
+var mouseDragOffsetVec = undefined;
+var highlight = "#ffffc0";
+var selected = undefined;
 
 // all-configuration does not return default exchanges, nor transient things like channels and connections. Hence TODO: invent 'all' which really does return everything
 function update() {
@@ -41,9 +46,9 @@ function updateReady() {
     }
 };
 
-var exchange = { yMax: 0,
+var exchange = { yMax: 100,
                  yIncr: 50,
-                 xInit: 10,
+                 xInit: 100,
                  xOffset: 100,
                  attributes: ['arguments', 'auto_delete', 'durable', 'internal', 'type']
                };
@@ -54,12 +59,46 @@ exchange.add = function(elem) {
     elem.pos[octtree.y] = exchange.yMax;
     elem.pos[octtree.z] = 0;
     exchange.yMax += exchange.yIncr;
-    if (undefined != model.bindings.destination["exchange"][elem.name] &&
-        0 < model.bindings.destination["exchange"][elem.name].length) {
-            elem.pos[octtree.x] += exchange.xOffset;
+    var xInbound = 0;
+    var xOutbound = 0;
+    var xCount = 0;
+    var incoming = model.bindings.destination["exchange"][elem.name];
+    if (undefined != incoming && 0 < incoming.length) {
+        var e;
+        for (var i = 0; i < incoming.length; ++i) {
+            e = model.exchanges[incoming[i].source];
+            if (undefined != e) {
+                xInbound += e.pos[octtree.x];
+                xCount++;
+            }
+        };
+        if (0 != xCount) {
+            xInbound = xInbound / xCount;
+        }
     }
-
+    xCount = 0;
+    var outgoing = model.bindings.source[elem.name];
+    if (undefined != outgoing && 0 < outgoing.length) {
+        var e;
+        for (var i = 0; i < outgoing.length; ++i) {
+            e = model.exchanges[outgoing[i].destination];
+            if (undefined != e) {
+                xOutbound += e.pos[octtree.x];
+                xCount++;
+            }
+        };
+        if (0 != xCount) {
+            xOutbound = xOutbound / xCount;
+        }
+    }
+    if (xInbound != 0) {
+        elem.pos[octtree.x] = (xInbound + xOutbound) / 2;
+    }
     elem.next_pos = vec3.create(elem.pos);
+    elem.xMin = elem.pos[octtree.x];
+    elem.xMax = elem.pos[octtree.x];
+    elem.mass = 1;
+    elem.velocity = vec3.create();
     tree.add(elem);
 };
 exchange.update = function(elem) {
@@ -73,8 +112,33 @@ exchange.update = function(elem) {
 exchange.remove = function(elem) {
     delete model.exchanges[elem.name];
 };
+exchange.render = function(elem, ctx) {
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = "12px sans-serif";
 
-var queue = { yMax: 0,
+    var dim = ctx.measureText(elem.name);
+
+    ctx.lineWidth = 2.0;
+    ctx.strokeStyle = "black";
+
+    ctx.beginPath();
+    ctx.arc(elem.pos[octtree.x] - (dim.width/2), elem.pos[octtree.y], 12, Math.PI/2, 3*Math.PI/2, false);
+    ctx.lineTo(elem.pos[octtree.x] + (dim.width/2), elem.pos[octtree.y] - 12);
+
+    ctx.arc(elem.pos[octtree.x] + (dim.width/2), elem.pos[octtree.y], 12, 3*Math.PI/2, Math.PI/2, false);
+    ctx.closePath();
+    draggable(elem, ctx);
+    ctx.stroke();
+
+    ctx.fillStyle = "black";
+    ctx.fillText(elem.name, elem.pos[octtree.x], elem.pos[octtree.y]);
+    
+    elem.xMin = elem.pos[octtree.x] - (dim.width/2) - 12;
+    elem.xMax = elem.pos[octtree.x] + (dim.width/2) + 12;
+};
+
+var queue = { yMax: 100,
               yIncr: 50,
               xInit: 400,
               attributes: ['arguments', 'auto_delete', 'durable']
@@ -88,6 +152,10 @@ queue.add = function(elem) {
     queue.yMax += queue.yIncr;
 
     elem.next_pos = vec3.create(elem.pos);
+    elem.xMin = elem.pos[octtree.x];
+    elem.xMax = elem.pos[octtree.x];
+    elem.mass = 1;
+    elem.velocity = vec3.create();
     tree.add(elem);
 };
 queue.update = function(elem) {
@@ -100,6 +168,84 @@ queue.update = function(elem) {
 };
 queue.remove = function(elem) {
     delete model.queues[elem.name];
+};
+queue.render = function(elem, ctx) {
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = "12px sans-serif";
+    var dim = ctx.measureText(elem.name);
+
+    ctx.lineWidth = 2.0;
+    ctx.strokeStyle = "black";
+    ctx.beginPath();
+    ctx.moveTo(elem.pos[octtree.x] - (dim.width/2) - 12, elem.pos[octtree.y] - 12);
+    ctx.lineTo(elem.pos[octtree.x] + (dim.width/2) + 12, elem.pos[octtree.y] - 12);
+    ctx.lineTo(elem.pos[octtree.x] + (dim.width/2) + 12, elem.pos[octtree.y] + 12);
+    ctx.lineTo(elem.pos[octtree.x] - (dim.width/2) - 12, elem.pos[octtree.y] + 12);
+    ctx.closePath();
+
+    draggable(elem, ctx);
+    ctx.stroke();
+
+    ctx.fillStyle = "black";
+    ctx.fillText(elem.name, elem.pos[octtree.x], elem.pos[octtree.y]);
+
+    elem.xMin = elem.pos[octtree.x] - (dim.width/2) - 12;
+    elem.xMax = elem.pos[octtree.x] + (dim.width/2) + 12;
+};
+
+var binding = { offset: 100 };
+binding.render = function(elem, ctx) {
+    var source = model.exchanges[elem.source];
+    var destination;
+    if (elem.destination_type == "exchange") {
+        destination = model.exchanges[elem.destination];
+    } else {
+        destination = model.queues[elem.destination];
+    }
+    var xMid = (source.xMax + destination.xMin) / 2;
+    var xMid1 = xMid > (source.xMax + binding.offset) ? xMid : source.xMax + binding.offset;
+    var xMid2 = xMid < (destination.xMin - binding.offset) ? xMid : destination.xMin - binding.offset; 
+    ctx.lineWidth = 2.0;
+    ctx.strokeStyle = "black";
+    ctx.moveTo(source.xMax, source.pos[octtree.y]);
+    
+    ctx.bezierCurveTo(xMid1, source.pos[octtree.y], xMid2, destination.pos[octtree.y],
+            destination.xMin, destination.pos[octtree.y]);
+    ctx.stroke();
+    
+    ctx.beginPath();
+    ctx.moveTo(destination.xMin, destination.pos[octtree.y]);
+    ctx.lineTo(destination.xMin - 12, destination.pos[octtree.y] + 6);
+    ctx.lineTo(destination.xMin - 12, destination.pos[octtree.y] - 6);
+    ctx.closePath();
+    ctx.fillStyle = "black";
+    ctx.fill();
+};
+
+function draggable(elem, ctx) {
+    var inPath = ctx.isPointInPath(mousePos[octtree.x], mousePos[octtree.y]); 
+    if ((inPath && undefined == selected) || selected == elem) {
+        ctx.fillStyle = highlight;
+        ctx.fill();
+        
+        if (mouseDown) {
+            selected = elem;
+            if (undefined == mouseDragOffsetVec) {
+                mouseDragOffsetVec = vec3.create(elem.pos);
+                vec3.subtract(mouseDragOffsetVec, mousePos);
+            }
+            vec3.set(mousePos, elem.next_pos);
+            vec3.add(elem.next_pos, mouseDragOffsetVec);
+            elem.velocity = vec3.create();
+        } else if (!inPath) {
+            selected = undefined;
+            mouseDragOffsetVec = undefined;
+        }
+    } else {
+        ctx.fillStyle = "white";
+        ctx.fill();
+    }  
 };
 
 function rebuildModel() {
@@ -173,10 +319,30 @@ window.requestAnimFrame = (function() {
   })();
 
 var ctx = undefined;
+var canvas = undefined;
+
+function mouseMove(e) {
+    var x = 0;
+    var y = 0;
+    if (e.pageX || e.pageY) { 
+        x = e.pageX;
+        y = e.pageY;
+    } else { 
+        x = e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft; 
+        y = e.clientY + document.body.scrollTop + document.documentElement.scrollTop; 
+    } 
+    x -= canvas.offsetLeft;
+    y -= canvas.offsetTop;
+    mousePos[octtree.x] = x;
+    mousePos[octtree.y] = y;
+};
 
 function initCanvas(canvas) {
     canvas.width = window.document.body.offsetWidth;
     canvas.height = window.document.body.offsetHeight;
+    canvas.onmousemove = mouseMove;
+    canvas.onmousedown = function (e) { mouseDown = true; };
+    canvas.onmouseup = function (e) { mouseDown = false; mouseDragOffsetVec = undefined; };
     try {
         ctx = canvas.getContext("2d");
     } catch (e) {
@@ -189,12 +355,52 @@ function initCanvas(canvas) {
 var lastTime = 0;
 
 function drawScene() {
+    ctx.lineWidth = 1.0;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeRect(0, 0, canvas.width, canvas.height);
+    var e;
+    for (var i in model.bindings.source) {
+        var ary = model.bindings.source[i];
+        for (var j = 0; j < ary.length; ++j) {
+            e = ary[j];
+            binding.render(e, ctx);
+        }
+    }
+    for (var i in model.exchanges) {
+        e = model.exchanges[i];
+        exchange.render(e, ctx);
+    }
+    for (var i in model.queues) {
+        e = model.queues[i];
+        queue.render(e, ctx);
+    }
 };
+
+gravity.octtreeRadius = 500;
+gravity.bigG = 100;
+gravity.repel = true;
 
 function animate() {
     var timeNow = new Date().getTime();
     if (lastTime != 0) {
-        var elapsed = (timeNow - lastTime) / 1000000;
+        var elapsed = (timeNow - lastTime) / 10000;
+        var e;
+        for (var i in model.exchanges) {
+            e = model.exchanges[i];
+            if (undefined == selected || selected != e) {
+                newton.update(elapsed, e);
+                gravity.update(elapsed, tree, e);
+            }
+        }
+        for (var i in model.queues) {
+            e = model.queues[i];
+            if (undefined == selected || selected != e) {
+                newton.update(elapsed, e);
+                gravity.update(elapsed, tree, e);
+            }
+        }
         tree.update();
     }
     lastTime = timeNow;
@@ -207,7 +413,7 @@ function tick() {
 };
 
 function visualisationStart() {
-    var canvas = document.getElementById("topology-canvas");
+    canvas = document.getElementById("topology-canvas");
     initCanvas(canvas);
     update();
     tick();

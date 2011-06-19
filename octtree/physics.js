@@ -51,6 +51,7 @@ var gravity = {};
 gravity.bigG = 1 / 20;
 gravity.octtreeRadius = 5;
 gravity.octtreeLimit = 20;
+gravity.repel = false;
 
 gravity.update = function(elapsed, tree, obj) {
     var vecOP = vec3.create();
@@ -68,7 +69,11 @@ gravity.update = function(elapsed, tree, obj) {
             if ((!(isNaN(distanceOP))) && 0 != distanceOP) {
                 vec3.scale(vecOP, (gravity.bigG * obj1.mass)
                         / (distanceOP * distanceOP));
-                vec3.add(obj.velocity, vecOP);
+                if (gravity.repel) {
+                    vec3.subtract(obj.velocity, vecOP);
+                } else {
+                    vec3.add(obj.velocity, vecOP);
+                }
             }
         }
     }
