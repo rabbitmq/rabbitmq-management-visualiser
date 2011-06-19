@@ -68,12 +68,14 @@ var exchange = {
     yMax : 100,
     yIncr : 50,
     xInit : 100,
+    xBoundary : 200,
     attributes : [ 'arguments', 'auto_delete', 'durable', 'internal', 'type',
             'message_stats_out', 'message_stats_in' ],
     pos : vec3.create()
 };
 exchange.canvasResized = function(canvas) {
-    exchange.xInit = canvas.width / 4;
+    exchange.xInit = canvas.width / 6;
+    exchange.xBoundary = 2 * canvas.width / 6;
 };
 exchange.add = function(tree, elem) {
     model.exchanges[elem.name] = elem;
@@ -130,7 +132,7 @@ exchange.render = function(elem, ctx) {
     elem.xMax = elem.pos[octtree.x] + (dim.width / 2) + 12;
 };
 exchange.animate = function(elapsed, elem) {
-    if (exchange.xInit * 2 > elem.pos[octtree.x]) {
+    if (exchange.xBoundary > elem.pos[octtree.x]) {
         exchange.pos[octtree.x] = exchange.xInit;
         exchange.pos[octtree.y] = elem.pos[octtree.y];
         spring.pull = true;
@@ -145,11 +147,14 @@ var queue = {
     yMax : 100,
     yIncr : 50,
     xInit : 400,
+    xBoundary : 300,
     attributes : [ 'arguments', 'auto_delete', 'durable', 'messages',
-            'messages_ready', 'messages_unacknowledged', 'message_stats' ]
+            'messages_ready', 'messages_unacknowledged', 'message_stats' ],
+    pos : vec3.create()
 };
 queue.canvasResized = function(canvas) {
-    queue.xInit = 3 * canvas.width / 4;
+    queue.xInit = 5 * canvas.width / 6;
+    queue.xBoundary = 4 * canvas.width / 6;
 };
 queue.add = function(tree, elem) {
     model.queues[elem.name] = elem;
@@ -210,7 +215,15 @@ queue.render = function(elem, ctx) {
     elem.xMax = elem.pos[octtree.x] + (dim.width / 2) + 12;
 };
 queue.animate = function(elapsed, elem) {
-    // might want to do a snapping thing again as with exchanges
+    if (queue.xBoundary < elem.pos[octtree.x]) {
+        queue.pos[octtree.x] = queue.xInit;
+        queue.pos[octtree.y] = elem.pos[octtree.y];
+        spring.pull = true;
+        spring.push = false;
+        spring.dampingFactor = 0.1;
+        spring.equilibriumLength = 0;
+        spring.apply(elapsed, elem, queue);
+    }
 };
 
 var binding = {

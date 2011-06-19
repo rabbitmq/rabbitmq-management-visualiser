@@ -188,7 +188,7 @@ function animate() {
         for (var i in model.queues) {
             e = model.queues[i];
             if (undefined == selected || selected != e) {
-                queue.animate(e);
+                queue.animate(elapsed, e);
                 spring.dampingFactor = 0.01;
                 spring.equilibriumLength = 50;
                 spring.pull = false;
