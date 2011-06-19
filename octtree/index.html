@@ -7,6 +7,7 @@
 <script type="text/javascript" src="glMatrix-min.js"></script>
 <script type="text/javascript" src="octtree.js"></script>
 <script type="text/javascript" src="physics.js"></script>
+<script type="text/javascript" src="model.js"></script>
 <script type="text/javascript">
 
 var updatePeriod = 1000; // 1 second
@@ -16,14 +17,6 @@ var client = new XMLHttpRequest();
 client.onreadystatechange = updateReady;
 
 var configuration = undefined;
-var vhost = "/";
-
-var model = {};
-model.exchanges = {};
-model.bindings = {};
-model.queues = {};
-model.connections = {};
-model.channels = {};
 
 var tree = octtree.create(0, 10000, 0, 10000, -1, 1);
 var mousePos = vec3.create();
@@ -41,214 +34,12 @@ function updateReady() {
     if (client.readyState == 4 && client.status == 200) {
         updateTimer = setTimeout("update();", updatePeriod);
         configuration = JSON.parse(client.responseText);
-        rebuildModel();
+        model.rebuild(tree, configuration);
     }
 };
 
-var exchange = { yMax: 100,
-                 yIncr: 50,
-                 xInit: 100,
-                 xOffset: 100,
-                 attributes: ['arguments', 'auto_delete', 'durable', 'internal', 'type'],
-                 pos: vec3.create()
-               };
-exchange.add = function(elem) {
-    model.exchanges[elem.name] = elem;
-    elem.pos = vec3.create();
-    elem.pos[octtree.x] = exchange.xInit;
-    elem.pos[octtree.y] = exchange.yMax;
-    elem.pos[octtree.z] = 0;
-    exchange.yMax += exchange.yIncr;
-    var xInbound = 0;
-    var xOutbound = 0;
-    var xCount = 0;
-    var incoming = model.bindings.destination["exchange"][elem.name];
-    if (undefined != incoming && 0 < incoming.length) {
-        var e;
-        for (var i = 0; i < incoming.length; ++i) {
-            e = model.exchanges[incoming[i].source];
-            if (undefined != e) {
-                xInbound += e.pos[octtree.x];
-                xCount++;
-            }
-        };
-        if (0 != xCount) {
-            xInbound = xInbound / xCount;
-        }
-    }
-    xCount = 0;
-    var outgoing = model.bindings.source[elem.name];
-    if (undefined != outgoing && 0 < outgoing.length) {
-        var e;
-        for (var i = 0; i < outgoing.length; ++i) {
-            e = model.exchanges[outgoing[i].destination];
-            if (undefined != e) {
-                xOutbound += e.pos[octtree.x];
-                xCount++;
-            }
-        };
-        if (0 != xCount) {
-            xOutbound = xOutbound / xCount;
-        }
-    }
-    if (xInbound != 0) {
-        elem.pos[octtree.x] = (xInbound + xOutbound) / 2;
-    }
-    elem.next_pos = vec3.create(elem.pos);
-    elem.xMin = elem.pos[octtree.x];
-    elem.xMax = elem.pos[octtree.x];
-    elem.mass = 1;
-    elem.velocity = vec3.create();
-    tree.add(elem);
-};
-exchange.update = function(elem) {
-    var e = model.exchanges[elem.name];
-    var attr;
-    for (var i = 0; i < exchange.attributes.length; ++i) {
-        attr = exchange.attributes[i];
-        e[attr] = elem[attr];
-    }
-};
-exchange.remove = function(elem) {
-    delete model.exchanges[elem.name];
-};
-exchange.render = function(elem, ctx) {
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.font = "12px sans-serif";
-
-    var dim = ctx.measureText(elem.name);
-
-    ctx.lineWidth = 2.0;
-    ctx.strokeStyle = "black";
-
-    ctx.beginPath();
-    ctx.arc(elem.pos[octtree.x] - (dim.width/2), elem.pos[octtree.y], 12, Math.PI/2, 3*Math.PI/2, false);
-    ctx.lineTo(elem.pos[octtree.x] + (dim.width/2), elem.pos[octtree.y] - 12);
-
-    ctx.arc(elem.pos[octtree.x] + (dim.width/2), elem.pos[octtree.y], 12, 3*Math.PI/2, Math.PI/2, false);
-    ctx.closePath();
-    draggable(elem, ctx);
-    ctx.stroke();
-
-    ctx.fillStyle = "black";
-    ctx.fillText(elem.name, elem.pos[octtree.x], elem.pos[octtree.y]);
-    
-    elem.xMin = elem.pos[octtree.x] - (dim.width/2) - 12;
-    elem.xMax = elem.pos[octtree.x] + (dim.width/2) + 12;
-};
-exchange.animate = function(elapsed, elem) {
-    if (exchange.xInit * 2 > elem.pos[octtree.x]) {
-        exchange.pos[octtree.x] = exchange.xInit;
-        exchange.pos[octtree.y] = elem.pos[octtree.y];
-        spring.pull = true;
-        spring.push = false;
-        spring.dampingFactor = 0.1;
-        spring.equilibriumLength = 0;
-        spring.apply(elapsed, elem, exchange);
-    }
-};
-
-var queue = { yMax: 100,
-              yIncr: 50,
-              xInit: 400,
-              attributes: ['arguments', 'auto_delete', 'durable']
-            };
-queue.add = function(elem) {
-    model.queues[elem.name] = elem;
-    elem.pos = vec3.create();
-    elem.pos[octtree.x] = queue.xInit;
-    elem.pos[octtree.y] = queue.yMax;
-    elem.pos[octtree.z] = 0;
-    queue.yMax += queue.yIncr;
-
-    elem.next_pos = vec3.create(elem.pos);
-    elem.xMin = elem.pos[octtree.x];
-    elem.xMax = elem.pos[octtree.x];
-    elem.mass = 1;
-    elem.velocity = vec3.create();
-    tree.add(elem);
-};
-queue.update = function(elem) {
-    var q = model.queues[elem.name];
-    var attr;
-    for (var i = 0; i < queue.attributes.length; ++i) {
-        attr = queue.attributes[i];
-        q[attr] = elem[attr];
-    }    
-};
-queue.remove = function(elem) {
-    delete model.queues[elem.name];
-};
-queue.render = function(elem, ctx) {
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.font = "12px sans-serif";
-    var dim = ctx.measureText(elem.name);
-
-    ctx.lineWidth = 2.0;
-    ctx.strokeStyle = "black";
-    ctx.beginPath();
-    ctx.moveTo(elem.pos[octtree.x] - (dim.width/2) - 12, elem.pos[octtree.y] - 12);
-    ctx.lineTo(elem.pos[octtree.x] + (dim.width/2) + 12, elem.pos[octtree.y] - 12);
-    ctx.lineTo(elem.pos[octtree.x] + (dim.width/2) + 12, elem.pos[octtree.y] + 12);
-    ctx.lineTo(elem.pos[octtree.x] - (dim.width/2) - 12, elem.pos[octtree.y] + 12);
-    ctx.closePath();
-
-    draggable(elem, ctx);
-    ctx.stroke();
-
-    ctx.fillStyle = "black";
-    ctx.fillText(elem.name, elem.pos[octtree.x], elem.pos[octtree.y]);
-
-    elem.xMin = elem.pos[octtree.x] - (dim.width/2) - 12;
-    elem.xMax = elem.pos[octtree.x] + (dim.width/2) + 12;
-};
-queue.animate = function (elapsed, elem) {
-    // might want to do a snapping thing again as with exchanges
-};
-
-var binding = { offset: 150 };
-binding.render = function(elem, ctx) {
-    var source = model.exchanges[elem.source];
-    var destination;
-    if (elem.destination_type == "exchange") {
-        destination = model.exchanges[elem.destination];
-    } else {
-        destination = model.queues[elem.destination];
-    }
-    var xMid = (source.xMax + destination.xMin) / 2;
-    var xMid1 = xMid > (source.xMax + binding.offset) ? xMid : source.xMax + binding.offset;
-    var xMid2 = xMid < (destination.xMin - binding.offset) ? xMid : destination.xMin - binding.offset; 
-    ctx.lineWidth = 2.0;
-    ctx.strokeStyle = "black";
-    ctx.moveTo(source.xMax, source.pos[octtree.y]);
-    
-    ctx.bezierCurveTo(xMid1, source.pos[octtree.y], xMid2, destination.pos[octtree.y],
-            destination.xMin, destination.pos[octtree.y]);
-    ctx.stroke();
-
-    // draw an arrow head
-    ctx.beginPath();
-    ctx.moveTo(destination.xMin, destination.pos[octtree.y]);
-    ctx.lineTo(destination.xMin - 12, destination.pos[octtree.y] + 6);
-    ctx.lineTo(destination.xMin - 12, destination.pos[octtree.y] - 6);
-    ctx.closePath();
-    ctx.fillStyle = "black";
-    ctx.fill();
-    
-    // draw the binding key
-    var yMid = (source.pos[octtree.y] + destination.pos[octtree.y])/2;
-    ctx.font = "12px sans-serif";
-    ctx.textBaseline = "middle";
-    ctx.textAlign = "center";
-    ctx.lineWidth = 6.0;
-    ctx.strokeStyle = "white";
-    ctx.strokeText(elem.routing_key, xMid, yMid);
-    ctx.fillStyle = "black";
-    ctx.fillText(elem.routing_key, xMid, yMid);
-    
-};
+exchange.postRender = draggable;
+queue.postRender = draggable;
 
 function draggable(elem, ctx) {
     var inPath = ctx.isPointInPath(mousePos[octtree.x], mousePos[octtree.y]); 
@@ -274,65 +65,6 @@ function draggable(elem, ctx) {
         ctx.fillStyle = "white";
         ctx.fill();
     }  
-};
-
-function rebuildModel() {
-    model.bindings.source = {};
-    model.bindings.destination = { "exchange": {}, "queue": {} };
-
-    var elem;
-    for (var i = 0; i < configuration.bindings.length; ++i) {
-        elem = configuration.bindings[i];
-        if (undefined == model.bindings.source[elem.source]) {
-            model.bindings.source[elem.source] = new Array(elem);
-        } else {
-            model.bindings.source[elem.source].push(elem);
-        }
-        
-        if (undefined == model.bindings.destination[elem.destination_type][elem.destination]) {
-            model.bindings.destination[elem.destination_type][elem.destination] = new Array(elem);
-        } else {
-            model.bindings.destination[elem.destination_type][elem.destination].push(elem);
-        }
-    }
-    
-    var matched = {};
-    for (var i = 0; i < configuration.exchanges.length; ++i) {
-        elem = configuration.exchanges[i];
-        if (elem.vhost == vhost) {
-            if (undefined == model.exchanges[elem.name]) {
-                exchange.add(elem);
-            } else {
-                exchange.update(elem);
-            }
-            matched[elem.name] = true;
-        }
-    }
-    for (var i in model.exchanges) {
-        if (undefined == matched[i]) {
-            exchange.remove(model.exchanges[i]);
-        }
-    }
-
-    matched = {};
-    for (var i = 0; i < configuration.queues.length; ++i) {
-        elem = configuration.queues[i];
-        if (elem.vhost == vhost) {
-            if (undefined == model.queues[elem.name]) {
-                queue.add(elem);
-            } else {
-                queue.update(elem);
-            }
-            matched[elem.name] = true;
-        }
-    }
-    for (var i in model.queues) {
-        if (undefined == matched[i]) {
-            queue.remove(model.queues[i]);
-        }
-    }
-
-    matched = undefined;
 };
 
 window.requestAnimFrame = (function() {
@@ -365,9 +97,17 @@ function mouseMove(e) {
     mousePos[octtree.y] = y;
 };
 
+function resizeCanvas() {
+    if (undefined != canvas) {
+        canvas.width = window.document.body.offsetWidth;
+        canvas.height = window.document.body.offsetHeight;
+        exchange.canvasResized(canvas);
+        queue.canvasResized(canvas);
+    }
+};
+
 function initCanvas(canvas) {
-    canvas.width = window.document.body.offsetWidth;
-    canvas.height = window.document.body.offsetHeight;
+    resizeCanvas();
     canvas.onmousemove = mouseMove;
     canvas.onmousedown = function (e) { mouseDown = true; mouseDragOffsetVec = undefined; };
     canvas.onmouseup = function (e) { mouseDown = false; mouseDragOffsetVec = undefined; };
@@ -386,22 +126,20 @@ function drawScene() {
     ctx.lineWidth = 1.0;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
+    ctx.strokeStyle = "black";
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.strokeRect(0, 0, canvas.width, canvas.height);
     var e;
     for (var i in model.exchanges) {
-        e = model.exchanges[i];
-        exchange.render(e, ctx);
+        exchange.render(model.exchanges[i], ctx);
     }
     for (var i in model.queues) {
-        e = model.queues[i];
-        queue.render(e, ctx);
+        queue.render(model.queues[i], ctx);
     }
     for (var i in model.bindings.source) {
         var ary = model.bindings.source[i];
         for (var j = 0; j < ary.length; ++j) {
-            e = ary[j];
-            binding.render(e, ctx);
+            binding.render(ary[j], ctx);
         }
     }
 };
@@ -480,7 +218,7 @@ function visualisationStart() {
 
 </script>
 </head>
-<body onload="visualisationStart();">
+<body onload="visualisationStart();" onresize="resizeCanvas();">
     <canvas id="topology-canvas"></canvas>
 </body>
 </html>
