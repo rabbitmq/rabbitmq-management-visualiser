@@ -76,9 +76,9 @@ queue.preStroke = draggable;
 binding.preStroke = function(source, destination) {
     if (undefined != hoveringOver) {
         if (hoveringOver == source) {
-            ctx.strokeStyle = "#00a000";
-        } else if (hoveringOver == destination) {
             ctx.strokeStyle = "#0000a0";
+        } else if (hoveringOver == destination) {
+            ctx.strokeStyle = "#00a000";
         } else {
             ctx.strokeStyle = faded;
         }
