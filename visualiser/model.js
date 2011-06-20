@@ -264,7 +264,8 @@ queue.animate = function(elapsed, elem) {
 
 var binding = {
     offset : 150,
-    fontSize : 12
+    fontSize : 12,
+    loopOffset : 50
 };
 binding.render = function(model, elem, ctx) {
     var source = model.exchanges[elem.source];
@@ -278,16 +279,19 @@ binding.render = function(model, elem, ctx) {
         return;
     }
     var xMid = (source.xMax + destination.xMin) / 2;
-    var xMid1 = xMid > (source.xMax + binding.offset) ? xMid : source.xMax
+    var xCtl1 = xMid > (source.xMax + binding.offset) ? xMid : source.xMax
             + binding.offset;
-    var xMid2 = xMid < (destination.xMin - binding.offset) ? xMid
+    var xCtl2 = xMid < (destination.xMin - binding.offset) ? xMid
             : destination.xMin - binding.offset;
+    var yCtl1 = destination == source ? source.pos[octtree.y]
+            - binding.loopOffset : source.pos[octtree.y];
+    var yCtl2 = destination == source ? destination.pos[octtree.y]
+            - binding.loopOffset : destination.pos[octtree.y];
     ctx.lineWidth = 2.0;
     ctx.strokeStyle = "black";
     ctx.moveTo(source.xMax, source.pos[octtree.y]);
 
-    ctx.bezierCurveTo(xMid1, source.pos[octtree.y], xMid2,
-            destination.pos[octtree.y], destination.xMin,
+    ctx.bezierCurveTo(xCtl1, yCtl1, xCtl2, yCtl2, destination.xMin,
             destination.pos[octtree.y]);
     ctx.stroke();
 
@@ -303,7 +307,9 @@ binding.render = function(model, elem, ctx) {
     ctx.fill();
 
     // draw the binding key
-    var yMid = (source.pos[octtree.y] + destination.pos[octtree.y]) / 2;
+    var yMid = source == destination ? source.pos[octtree.y]
+            - binding.loopOffset + 12
+            : (source.pos[octtree.y] + destination.pos[octtree.y]) / 2;
     ctx.font = "" + binding.fontSize + "px sans-serif";
     ctx.textBaseline = "middle";
     ctx.textAlign = "center";
