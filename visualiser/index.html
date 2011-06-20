@@ -24,7 +24,9 @@ var mousePos = vec3.create();
 var mouseDown = false;
 var mouseDragOffsetVec = undefined;
 var highlight = "#ffffc0";
-var selected = undefined;
+var faded = "#b0b0b0";
+var hoveringOver = undefined;
+var dragging = undefined;
 
 function update() {
     client.open("GET", "/api/all");
@@ -39,17 +41,15 @@ function updateReady() {
     }
 };
 
-exchange.postRender = draggable;
-queue.postRender = draggable;
-
 function draggable(elem, ctx) {
     var inPath = ctx.isPointInPath(mousePos[octtree.x], mousePos[octtree.y]); 
-    if ((inPath && undefined == selected) || selected == elem) {
+    if ((inPath && undefined == hoveringOver) || dragging == elem || hoveringOver == elem) {
         ctx.fillStyle = highlight;
         ctx.fill();
         
+        hoveringOver = elem;
         if (mouseDown) {
-            selected = elem;
+            dragging = elem;
             if (undefined == mouseDragOffsetVec) {
                 mouseDragOffsetVec = vec3.create(elem.pos);
                 vec3.subtract(mouseDragOffsetVec, mousePos);
@@ -59,13 +59,30 @@ function draggable(elem, ctx) {
             elem.velocity = vec3.create();
             clamp(elem);
         } else if (!inPath) {
-            selected = undefined;
+            dragging = undefined;
+            hoveringOver = undefined;
             mouseDragOffsetVec = undefined;
         }
     } else {
         ctx.fillStyle = "white";
         ctx.fill();
-    }  
+    }
+    if (undefined != hoveringOver && hoveringOver != elem) {
+        ctx.strokeStyle = faded;
+    }
+};
+exchange.preStroke = draggable;
+queue.preStroke = draggable;
+binding.preStroke = function(source, destination) {
+    if (undefined != hoveringOver) {
+        if (hoveringOver == source) {
+            ctx.strokeStyle = "#00a000";
+        } else if (hoveringOver == destination) {
+            ctx.strokeStyle = "#0000a0";
+        } else {
+            ctx.strokeStyle = faded;
+        }
+    }
 };
 
 window.requestAnimFrame = (function() {
@@ -117,7 +134,7 @@ function initCanvas(canvas) {
     canvas.onmouseup = function (e) {
         mouseDown = false;
         mouseDragOffsetVec = undefined;
-        selected = undefined;
+        dragging = undefined;
     };
     try {
         ctx = canvas.getContext("2d");
@@ -182,7 +199,7 @@ function animate() {
         var e;
         for (var i in model.exchanges) {
             e = model.exchanges[i];
-            if (undefined == selected || selected != e) {
+            if (undefined == dragging || dragging != e) {
                 exchange.animate(elapsed, e);
                 newton.update(elapsed, e);
                 spring.update(elapsed, tree, e);
@@ -191,7 +208,7 @@ function animate() {
         }
         for (var i in model.queues) {
             e = model.queues[i];
-            if (undefined == selected || selected != e) {
+            if (undefined == dragging || dragging != e) {
                 queue.animate(elapsed, e);
                 newton.update(elapsed, e);
                 spring.update(elapsed, tree, e);

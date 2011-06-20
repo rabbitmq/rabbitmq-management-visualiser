@@ -127,6 +127,7 @@ exchange.remove = function(model, tree, elem) {
     }
 };
 exchange.render = function(model, elem, ctx) {
+    ctx.beginPath();
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.font = "" + exchange.fontSize + "px sans-serif";
@@ -136,7 +137,6 @@ exchange.render = function(model, elem, ctx) {
     ctx.lineWidth = 2.0;
     ctx.strokeStyle = "black";
 
-    ctx.beginPath();
     ctx.arc(elem.pos[octtree.x] - (dim.width / 2), elem.pos[octtree.y],
             exchange.fontSize, Math.PI / 2, 3 * Math.PI / 2, false);
     ctx.lineTo(elem.pos[octtree.x] + (dim.width / 2), elem.pos[octtree.y]
@@ -145,12 +145,12 @@ exchange.render = function(model, elem, ctx) {
     ctx.arc(elem.pos[octtree.x] + (dim.width / 2), elem.pos[octtree.y],
             exchange.fontSize, 3 * Math.PI / 2, Math.PI / 2, false);
     ctx.closePath();
-    if (undefined != exchange.postRender) {
-        exchange.postRender(elem, ctx);
-    }
+
+    exchange.preStroke(elem, ctx);
     ctx.stroke();
 
-    ctx.fillStyle = "black";
+    ctx.beginPath();
+    ctx.fillStyle = ctx.strokeStyle;
     ctx.fillText(elem.name, elem.pos[octtree.x], elem.pos[octtree.y]);
 
     elem.xMin = elem.pos[octtree.x] - (dim.width / 2) - exchange.fontSize;
@@ -158,6 +158,8 @@ exchange.render = function(model, elem, ctx) {
 
     exchange.yMax = Math.max(exchange.yMax, elem.pos[octtree.y]
             + exchange.yIncr);
+};
+exchange.preStroke = function(elem, ctx) {
 };
 exchange.animate = function(elapsed, elem) {
     if (exchange.xBoundary > elem.pos[octtree.x]) {
@@ -223,6 +225,7 @@ queue.remove = function(model, tree, elem) {
     }
 };
 queue.render = function(model, elem, ctx) {
+    ctx.beginPath();
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.font = "" + queue.fontSize + "px sans-serif";
@@ -232,7 +235,6 @@ queue.render = function(model, elem, ctx) {
 
     ctx.lineWidth = 2.0;
     ctx.strokeStyle = "black";
-    ctx.beginPath();
     ctx.moveTo(elem.pos[octtree.x] - (dim.width / 2) - queue.fontSize,
             elem.pos[octtree.y] - queue.fontSize);
     ctx.lineTo(elem.pos[octtree.x] + (dim.width / 2) + queue.fontSize,
@@ -243,18 +245,19 @@ queue.render = function(model, elem, ctx) {
             elem.pos[octtree.y] + queue.fontSize);
     ctx.closePath();
 
-    if (undefined != queue.postRender) {
-        queue.postRender(elem, ctx);
-    }
+    queue.preStroke(elem, ctx);
     ctx.stroke();
 
-    ctx.fillStyle = "black";
+    ctx.beginPath();
+    ctx.fillStyle = ctx.strokeStyle;
     ctx.fillText(text, elem.pos[octtree.x], elem.pos[octtree.y]);
 
     elem.xMin = elem.pos[octtree.x] - (dim.width / 2) - queue.fontSize;
     elem.xMax = elem.pos[octtree.x] + (dim.width / 2) + queue.fontSize;
 
     queue.yMax = Math.max(queue.yMax, elem.pos[octtree.y] + queue.yIncr);
+};
+queue.preStroke = function(elem, ctx) {
 };
 queue.animate = function(elapsed, elem) {
     if (queue.xBoundary < elem.pos[octtree.x]) {
@@ -289,12 +292,13 @@ binding.render = function(model, elem, ctx) {
             - binding.loopOffset : source.pos[octtree.y];
     var yCtl2 = destination == source ? destination.pos[octtree.y]
             - binding.loopOffset : destination.pos[octtree.y];
+    ctx.beginPath();
     ctx.lineWidth = 2.0;
     ctx.strokeStyle = "black";
     ctx.moveTo(source.xMax, source.pos[octtree.y]);
-
     ctx.bezierCurveTo(xCtl1, yCtl1, xCtl2, yCtl2, destination.xMin,
             destination.pos[octtree.y]);
+    binding.preStroke(source, destination, ctx);
     ctx.stroke();
 
     // draw an arrow head
@@ -305,10 +309,11 @@ binding.render = function(model, elem, ctx) {
     ctx.lineTo(destination.xMin - binding.fontSize, destination.pos[octtree.y]
             - (binding.fontSize / 2));
     ctx.closePath();
-    ctx.fillStyle = "black";
+    ctx.fillStyle = ctx.strokeStyle;
     ctx.fill();
 
     // draw the binding key
+    ctx.beginPath();
     var yMid = source == destination ? source.pos[octtree.y]
             - binding.loopOffset + 12
             : (source.pos[octtree.y] + destination.pos[octtree.y]) / 2;
@@ -318,6 +323,7 @@ binding.render = function(model, elem, ctx) {
     ctx.lineWidth = binding.fontSize / 2;
     ctx.strokeStyle = "white";
     ctx.strokeText(elem.routing_key, xMid, yMid);
-    ctx.fillStyle = "black";
     ctx.fillText(elem.routing_key, xMid, yMid);
+};
+binding.preStroke = function(source, destination, ctx) {
 };
