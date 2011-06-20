@@ -1,15 +1,17 @@
 function Model() {
-    this.source = {};
-    this.destination = {
-        "exchange" : {},
-        "queue" : {}
+    this.exchanges = {};
+    this.bindings = {
+        source : {},
+        destination : {
+            "exchange" : {},
+            "queue" : {}
+        }
     };
+    this.queues = {};
+    this.connections = {};
+    this.channels = {};
 };
-Model.prototype.exchanges = {};
-Model.prototype.bindings = {};
-Model.prototype.queues = {};
-Model.prototype.connections = {};
-Model.prototype.channels = {};
+
 Model.prototype.rebuild = function(tree, configuration) {
     this.bindings.source = {};
     this.bindings.destination = {
