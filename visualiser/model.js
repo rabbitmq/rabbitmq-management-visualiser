@@ -274,6 +274,9 @@ binding.render = function(model, elem, ctx) {
     } else {
         destination = model.queues[elem.destination];
     }
+    if (undefined == source || undefined == destination) {
+        return;
+    }
     var xMid = (source.xMax + destination.xMin) / 2;
     var xMid1 = xMid > (source.xMax + binding.offset) ? xMid : source.xMax
             + binding.offset;
