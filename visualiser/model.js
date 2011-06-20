@@ -72,7 +72,8 @@ var exchange = {
     xBoundary : 200,
     attributes : [ 'arguments', 'auto_delete', 'durable', 'internal', 'type',
             'message_stats_out', 'message_stats_in' ],
-    pos : vec3.create()
+    pos : vec3.create(),
+    fontSize : 12
 };
 exchange.canvasResized = function(canvas) {
     exchange.xInit = canvas.width / 6;
@@ -112,7 +113,7 @@ exchange.remove = function(elem) {
 exchange.render = function(elem, ctx) {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.font = "12px sans-serif";
+    ctx.font = "" + exchange.fontSize + "px sans-serif";
 
     var dim = ctx.measureText(elem.name);
 
@@ -120,12 +121,13 @@ exchange.render = function(elem, ctx) {
     ctx.strokeStyle = "black";
 
     ctx.beginPath();
-    ctx.arc(elem.pos[octtree.x] - (dim.width / 2), elem.pos[octtree.y], 12,
-            Math.PI / 2, 3 * Math.PI / 2, false);
-    ctx.lineTo(elem.pos[octtree.x] + (dim.width / 2), elem.pos[octtree.y] - 12);
+    ctx.arc(elem.pos[octtree.x] - (dim.width / 2), elem.pos[octtree.y],
+            exchange.fontSize, Math.PI / 2, 3 * Math.PI / 2, false);
+    ctx.lineTo(elem.pos[octtree.x] + (dim.width / 2), elem.pos[octtree.y]
+            - exchange.fontSize);
 
-    ctx.arc(elem.pos[octtree.x] + (dim.width / 2), elem.pos[octtree.y], 12,
-            3 * Math.PI / 2, Math.PI / 2, false);
+    ctx.arc(elem.pos[octtree.x] + (dim.width / 2), elem.pos[octtree.y],
+            exchange.fontSize, 3 * Math.PI / 2, Math.PI / 2, false);
     ctx.closePath();
     if (undefined != exchange.postRender) {
         exchange.postRender(elem, ctx);
@@ -135,8 +137,8 @@ exchange.render = function(elem, ctx) {
     ctx.fillStyle = "black";
     ctx.fillText(elem.name, elem.pos[octtree.x], elem.pos[octtree.y]);
 
-    elem.xMin = elem.pos[octtree.x] - (dim.width / 2) - 12;
-    elem.xMax = elem.pos[octtree.x] + (dim.width / 2) + 12;
+    elem.xMin = elem.pos[octtree.x] - (dim.width / 2) - exchange.fontSize;
+    elem.xMax = elem.pos[octtree.x] + (dim.width / 2) + exchange.fontSize;
 
     exchange.yMax = Math.max(exchange.yMax, elem.pos[octtree.y]
             + exchange.yIncr);
@@ -161,7 +163,8 @@ var queue = {
     xBoundary : 300,
     attributes : [ 'arguments', 'auto_delete', 'durable', 'messages',
             'messages_ready', 'messages_unacknowledged', 'message_stats' ],
-    pos : vec3.create()
+    pos : vec3.create(),
+    fontSize : 12
 };
 queue.canvasResized = function(canvas) {
     queue.xInit = 5 * canvas.width / 6;
@@ -202,7 +205,7 @@ queue.remove = function(tree, elem) {
 queue.render = function(elem, ctx) {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.font = "12px sans-serif";
+    ctx.font = "" + queue.fontSize + "px sans-serif";
     var text = elem.name + " (" + elem.messages_ready + ", "
             + elem.messages_unacknowledged + ")";
     var dim = ctx.measureText(text);
@@ -210,14 +213,14 @@ queue.render = function(elem, ctx) {
     ctx.lineWidth = 2.0;
     ctx.strokeStyle = "black";
     ctx.beginPath();
-    ctx.moveTo(elem.pos[octtree.x] - (dim.width / 2) - 12,
-            elem.pos[octtree.y] - 12);
-    ctx.lineTo(elem.pos[octtree.x] + (dim.width / 2) + 12,
-            elem.pos[octtree.y] - 12);
-    ctx.lineTo(elem.pos[octtree.x] + (dim.width / 2) + 12,
-            elem.pos[octtree.y] + 12);
-    ctx.lineTo(elem.pos[octtree.x] - (dim.width / 2) - 12,
-            elem.pos[octtree.y] + 12);
+    ctx.moveTo(elem.pos[octtree.x] - (dim.width / 2) - queue.fontSize,
+            elem.pos[octtree.y] - queue.fontSize);
+    ctx.lineTo(elem.pos[octtree.x] + (dim.width / 2) + queue.fontSize,
+            elem.pos[octtree.y] - queue.fontSize);
+    ctx.lineTo(elem.pos[octtree.x] + (dim.width / 2) + queue.fontSize,
+            elem.pos[octtree.y] + queue.fontSize);
+    ctx.lineTo(elem.pos[octtree.x] - (dim.width / 2) - queue.fontSize,
+            elem.pos[octtree.y] + queue.fontSize);
     ctx.closePath();
 
     if (undefined != queue.postRender) {
@@ -228,8 +231,8 @@ queue.render = function(elem, ctx) {
     ctx.fillStyle = "black";
     ctx.fillText(text, elem.pos[octtree.x], elem.pos[octtree.y]);
 
-    elem.xMin = elem.pos[octtree.x] - (dim.width / 2) - 12;
-    elem.xMax = elem.pos[octtree.x] + (dim.width / 2) + 12;
+    elem.xMin = elem.pos[octtree.x] - (dim.width / 2) - queue.fontSize;
+    elem.xMax = elem.pos[octtree.x] + (dim.width / 2) + queue.fontSize;
 
     queue.yMax = Math.max(queue.yMax, elem.pos[octtree.y] + queue.yIncr);
 };
@@ -246,7 +249,8 @@ queue.animate = function(elapsed, elem) {
 };
 
 var binding = {
-    offset : 150
+    offset : 150,
+    fontSize : 12
 };
 binding.render = function(elem, ctx) {
     var source = model.exchanges[elem.source];
@@ -273,18 +277,20 @@ binding.render = function(elem, ctx) {
     // draw an arrow head
     ctx.beginPath();
     ctx.moveTo(destination.xMin, destination.pos[octtree.y]);
-    ctx.lineTo(destination.xMin - 12, destination.pos[octtree.y] + 6);
-    ctx.lineTo(destination.xMin - 12, destination.pos[octtree.y] - 6);
+    ctx.lineTo(destination.xMin - binding.fontSize, destination.pos[octtree.y]
+            + (binding.fontSize / 2));
+    ctx.lineTo(destination.xMin - binding.fontSize, destination.pos[octtree.y]
+            - (binding.fontSize / 2));
     ctx.closePath();
     ctx.fillStyle = "black";
     ctx.fill();
 
     // draw the binding key
     var yMid = (source.pos[octtree.y] + destination.pos[octtree.y]) / 2;
-    ctx.font = "12px sans-serif";
+    ctx.font = "" + binding.fontSize + "px sans-serif";
     ctx.textBaseline = "middle";
     ctx.textAlign = "center";
-    ctx.lineWidth = 6.0;
+    ctx.lineWidth = binding.fontSize / 2;
     ctx.strokeStyle = "white";
     ctx.strokeText(elem.routing_key, xMid, yMid);
     ctx.fillStyle = "black";
