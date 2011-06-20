@@ -82,7 +82,7 @@ var exchange = {
             'message_stats_out', 'message_stats_in' ],
     pos : vec3.create(),
     fontSize : 12,
-    spring : new Spring(),
+    spring : new Spring()
 };
 exchange.spring.octtreeLimit = 10;
 exchange.spring.octtreeRadius = 500;
