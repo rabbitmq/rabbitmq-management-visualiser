@@ -19,6 +19,7 @@ client.onreadystatechange = updateReady;
 var configuration = undefined;
 
 var tree = octtree.create(0, 10000, 0, 10000, -1, 1);
+var model = new Model();
 var mousePos = vec3.create();
 var mouseDown = false;
 var mouseDragOffsetVec = undefined;
@@ -138,15 +139,15 @@ function drawScene() {
     ctx.strokeRect(0, 0, canvas.width, canvas.height);
     var e;
     for (var i in model.exchanges) {
-        exchange.render(model.exchanges[i], ctx);
+        exchange.render(model, model.exchanges[i], ctx);
     }
     for (var i in model.queues) {
-        queue.render(model.queues[i], ctx);
+        queue.render(model, model.queues[i], ctx);
     }
     for (var i in model.bindings.source) {
         var ary = model.bindings.source[i];
         for (var j = 0; j < ary.length; ++j) {
-            binding.render(ary[j], ctx);
+            binding.render(model, ary[j], ctx);
         }
     }
 };
@@ -166,13 +167,13 @@ function clamp(elem) {
     }
 };
 
-gravity.octtreeRadius = 500;
-gravity.bigG = 100;
-gravity.repel = true;
-
+var newton = new Newton();
+var spring = new Spring();
 spring.octtreeRadius = 500;
 spring.equilibriumLength = 50;
 spring.dampingFactor = 0.01;
+spring.pull = false;
+spring.push = true;
 
 function animate() {
     var timeNow = new Date().getTime();
@@ -183,10 +184,6 @@ function animate() {
             e = model.exchanges[i];
             if (undefined == selected || selected != e) {
                 exchange.animate(elapsed, e);
-                spring.dampingFactor = 0.01;
-                spring.equilibriumLength = 50;
-                spring.pull = false;
-                spring.push = true;
                 newton.update(elapsed, e);
                 spring.update(elapsed, tree, e);
                 clamp(e);
@@ -196,10 +193,6 @@ function animate() {
             e = model.queues[i];
             if (undefined == selected || selected != e) {
                 queue.animate(elapsed, e);
-                spring.dampingFactor = 0.01;
-                spring.equilibriumLength = 50;
-                spring.pull = false;
-                spring.push = true;
                 newton.update(elapsed, e);
                 spring.update(elapsed, tree, e);
                 clamp(e);

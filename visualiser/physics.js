@@ -1,49 +1,50 @@
-var newton = {};
-newton.friction = 100;
+function Newton() {
+};
+Newton.prototype.friction = 100;
 
-newton.update = function(elapsed, obj) {
-    vec3.scale(obj.velocity, 1 - (newton.friction * elapsed));
+Newton.prototype.update = function(elapsed, obj) {
+    vec3.scale(obj.velocity, 1 - (this.friction * elapsed));
     var incr = vec3.create(obj.velocity);
     vec3.scale(incr, elapsed);
     vec3.add(obj.pos, incr, obj.next_pos);
 };
 
-var spring = {};
-spring.k = 1;
-spring.equilibriumLength = 2;
-spring.push = true;
-spring.pull = true;
-spring.dampingFactor = 0.5;
-spring.octtreeRadius = 4;
-spring.octtreeLimit = 40;
+function Spring() {
+};
+Spring.prototype.k = 1;
+Spring.prototype.equilibriumLength = 2;
+Spring.prototype.push = true;
+Spring.prototype.pull = true;
+Spring.prototype.dampingFactor = 0.5;
+Spring.prototype.octtreeRadius = 4;
+Spring.prototype.octtreeLimit = 40;
 
-spring.apply = function(elapsed, obj1, obj2) {
-    var damper = spring.dampingFactor * elapsed * 100000;
+Spring.prototype.apply = function(elapsed, obj1, obj2) {
+    var damper = this.dampingFactor * elapsed * 100000;
     var vecOP = vec3.create();
     var distanceOP = 0;
     var x = 0;
     vec3.subtract(obj2.pos, obj1.pos, vecOP);
     distanceOP = vec3.length(vecOP);
     if (!isNaN(distanceOP) && 0 != distanceOP) {
-        x = distanceOP - spring.equilibriumLength;
-        if (distanceOP > spring.equilibriumLength && !spring.pull) {
+        x = distanceOP - this.equilibriumLength;
+        if (distanceOP > this.equilibriumLength && !this.pull) {
             return;
         }
-        if (distanceOP < spring.equilibriumLength && !spring.push) {
+        if (distanceOP < this.equilibriumLength && !this.push) {
             return;
         }
-        vec3.scale(vecOP,
-                (damper * (((1 / distanceOP) * x) / obj1.mass)));
+        vec3.scale(vecOP, (damper * (((1 / distanceOP) * x) / obj1.mass)));
         vec3.add(obj1.velocity, vecOP);
-    }    
+    }
 };
-spring.update = function(elapsed, tree, obj) {
-    var damper = spring.dampingFactor * elapsed * 100000;
+Spring.prototype.update = function(elapsed, tree, obj) {
+    var damper = this.dampingFactor * elapsed * 100000;
     var vecOP = vec3.create();
     var distanceOP = 0;
     var x = 0;
-    var found = tree.findInRadius(obj.pos, spring.octtreeRadius,
-            spring.octtreeLimit);
+    var found = tree.findInRadius(obj.pos, this.octtreeRadius,
+            this.octtreeLimit);
     for ( var i = 0; i < found.length; ++i) {
         var obj1 = found[i].value;
         if (obj1 != obj) {
@@ -52,11 +53,11 @@ spring.update = function(elapsed, tree, obj) {
             vec3.subtract(obj1.pos, obj.pos, vecOP);
             distanceOP = vec3.length(vecOP);
             if (!isNaN(distanceOP) && 0 != distanceOP) {
-                x = distanceOP - spring.equilibriumLength;
-                if (distanceOP > spring.equilibriumLength && !spring.pull) {
+                x = distanceOP - this.equilibriumLength;
+                if (distanceOP > this.equilibriumLength && !this.pull) {
                     continue;
                 }
-                if (distanceOP < spring.equilibriumLength && !spring.push) {
+                if (distanceOP < this.equilibriumLength && !this.push) {
                     continue;
                 }
                 vec3.scale(vecOP,
@@ -67,17 +68,18 @@ spring.update = function(elapsed, tree, obj) {
     }
 };
 
-var gravity = {};
-gravity.bigG = 1 / 20;
-gravity.octtreeRadius = 5;
-gravity.octtreeLimit = 20;
-gravity.repel = false;
+function Gravity() {
+};
+Gravity.prototype.bigG = 1 / 20;
+Gravity.prototype.octtreeRadius = 5;
+Gravity.prototype.octtreeLimit = 20;
+Gravity.prototype.repel = false;
 
-gravity.update = function(elapsed, tree, obj) {
+Gravity.prototype.update = function(elapsed, tree, obj) {
     var vecOP = vec3.create();
     var distanceOP = 0;
-    var found = tree.findInRadius(obj.pos, gravity.octtreeRadius,
-            gravity.octtreeLimit);
+    var found = tree.findInRadius(obj.pos, this.octtreeRadius,
+            this.octtreeLimit);
     for ( var i = 0; i < found.length; ++i) {
         var obj1 = found[i].value;
         if (obj1 != obj) {
@@ -87,9 +89,9 @@ gravity.update = function(elapsed, tree, obj) {
             vec3.subtract(obj1.pos, obj.pos, vecOP);
             distanceOP = vec3.length(vecOP);
             if ((!(isNaN(distanceOP))) && 0 != distanceOP) {
-                vec3.scale(vecOP, (gravity.bigG * obj1.mass)
+                vec3.scale(vecOP, (this.bigG * obj1.mass)
                         / (distanceOP * distanceOP));
-                if (gravity.repel) {
+                if (this.repel) {
                     vec3.subtract(obj.velocity, vecOP);
                 } else {
                     vec3.add(obj.velocity, vecOP);
@@ -97,5 +99,4 @@ gravity.update = function(elapsed, tree, obj) {
             }
         }
     }
-
 };

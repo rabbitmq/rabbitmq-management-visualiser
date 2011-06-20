@@ -1,12 +1,18 @@
-var model = {};
-model.exchanges = {};
-model.bindings = {};
-model.queues = {};
-model.connections = {};
-model.channels = {};
-model.rebuild = function(tree, configuration) {
-    model.bindings.source = {};
-    model.bindings.destination = {
+function Model() {
+    this.source = {};
+    this.destination = {
+        "exchange" : {},
+        "queue" : {}
+    };
+};
+Model.prototype.exchanges = {};
+Model.prototype.bindings = {};
+Model.prototype.queues = {};
+Model.prototype.connections = {};
+Model.prototype.channels = {};
+Model.prototype.rebuild = function(tree, configuration) {
+    this.bindings.source = {};
+    this.bindings.destination = {
         "exchange" : {},
         "queue" : {}
     };
@@ -14,17 +20,17 @@ model.rebuild = function(tree, configuration) {
     var elem;
     for ( var i = 0; i < configuration.bindings.length; ++i) {
         elem = configuration.bindings[i];
-        if (undefined == model.bindings.source[elem.source]) {
-            model.bindings.source[elem.source] = new Array(elem);
+        if (undefined == this.bindings.source[elem.source]) {
+            this.bindings.source[elem.source] = new Array(elem);
         } else {
-            model.bindings.source[elem.source].push(elem);
+            this.bindings.source[elem.source].push(elem);
         }
 
-        if (undefined == model.bindings.destination[elem.destination_type][elem.destination]) {
-            model.bindings.destination[elem.destination_type][elem.destination] = new Array(
+        if (undefined == this.bindings.destination[elem.destination_type][elem.destination]) {
+            this.bindings.destination[elem.destination_type][elem.destination] = new Array(
                     elem);
         } else {
-            model.bindings.destination[elem.destination_type][elem.destination]
+            this.bindings.destination[elem.destination_type][elem.destination]
                     .push(elem);
         }
     }
@@ -32,32 +38,32 @@ model.rebuild = function(tree, configuration) {
     var matched = {};
     for ( var i = 0; i < configuration.exchanges.length; ++i) {
         elem = configuration.exchanges[i];
-        if (undefined == model.exchanges[elem.name]) {
-            exchange.add(tree, elem);
+        if (undefined == this.exchanges[elem.name]) {
+            exchange.add(this, tree, elem);
         } else {
-            exchange.update(elem);
+            exchange.update(this, elem);
         }
         matched[elem.name] = true;
     }
-    for ( var i in model.exchanges) {
+    for ( var i in this.exchanges) {
         if (undefined == matched[i]) {
-            exchange.remove(tree, model.exchanges[i]);
+            exchange.remove(this, tree, this.exchanges[i]);
         }
     }
 
     matched = {};
     for ( var i = 0; i < configuration.queues.length; ++i) {
         elem = configuration.queues[i];
-        if (undefined == model.queues[elem.name]) {
-            queue.add(tree, elem);
+        if (undefined == this.queues[elem.name]) {
+            queue.add(this, tree, elem);
         } else {
-            queue.update(elem);
+            queue.update(this, elem);
         }
         matched[elem.name] = true;
     }
-    for ( var i in model.queues) {
+    for ( var i in this.queues) {
         if (undefined == matched[i]) {
-            queue.remove(tree, model.queues[i]);
+            queue.remove(this, tree, this.queues[i]);
         }
     }
 
@@ -73,13 +79,21 @@ var exchange = {
     attributes : [ 'arguments', 'auto_delete', 'durable', 'internal', 'type',
             'message_stats_out', 'message_stats_in' ],
     pos : vec3.create(),
-    fontSize : 12
+    fontSize : 12,
+    spring : new Spring(),
 };
+exchange.spring.octtreeLimit = 10;
+exchange.spring.octtreeRadius = 500;
+exchange.spring.equilibriumLength = 0;
+exchange.spring.dampingFactor = 0.1;
+exchange.spring.pull = true;
+exchange.spring.push = false;
+
 exchange.canvasResized = function(canvas) {
     exchange.xInit = canvas.width / 6;
     exchange.xBoundary = 2 * canvas.width / 6;
 };
-exchange.add = function(tree, elem) {
+exchange.add = function(model, tree, elem) {
     model.exchanges[elem.name] = elem;
     elem.pos = vec3.create();
     elem.pos[octtree.x] = exchange.xInit;
@@ -93,7 +107,7 @@ exchange.add = function(tree, elem) {
     elem.velocity = vec3.create();
     tree.add(elem);
 };
-exchange.update = function(elem) {
+exchange.update = function(model, elem) {
     var e = model.exchanges[elem.name];
     var attr;
     for ( var i = 0; i < exchange.attributes.length; ++i) {
@@ -101,7 +115,7 @@ exchange.update = function(elem) {
         e[attr] = elem[attr];
     }
 };
-exchange.remove = function(elem) {
+exchange.remove = function(model, tree, elem) {
     tree.del(elem);
     delete model.exchanges[elem.name];
     exchange.yMax = exchange.yTop;
@@ -110,7 +124,7 @@ exchange.remove = function(elem) {
                 model.exchages[i].pos[octtree.y] + exchange.yIncr);
     }
 };
-exchange.render = function(elem, ctx) {
+exchange.render = function(model, elem, ctx) {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.font = "" + exchange.fontSize + "px sans-serif";
@@ -147,11 +161,7 @@ exchange.animate = function(elapsed, elem) {
     if (exchange.xBoundary > elem.pos[octtree.x]) {
         exchange.pos[octtree.x] = exchange.xInit;
         exchange.pos[octtree.y] = elem.pos[octtree.y];
-        spring.pull = true;
-        spring.push = false;
-        spring.dampingFactor = 0.1;
-        spring.equilibriumLength = 0;
-        spring.apply(elapsed, elem, exchange);
+        exchange.spring.apply(elapsed, elem, exchange);
     }
 };
 
@@ -164,13 +174,21 @@ var queue = {
     attributes : [ 'arguments', 'auto_delete', 'durable', 'messages',
             'messages_ready', 'messages_unacknowledged', 'message_stats' ],
     pos : vec3.create(),
-    fontSize : 12
+    fontSize : 12,
+    spring : new Spring()
 };
+queue.spring.octtreeLimit = 10;
+queue.spring.octtreeRadius = 500;
+queue.spring.equilibriumLength = 0;
+queue.spring.dampingFactor = 0.1;
+queue.spring.pull = true;
+queue.spring.push = false;
+
 queue.canvasResized = function(canvas) {
     queue.xInit = 5 * canvas.width / 6;
     queue.xBoundary = 4 * canvas.width / 6;
 };
-queue.add = function(tree, elem) {
+queue.add = function(model, tree, elem) {
     model.queues[elem.name] = elem;
     elem.pos = vec3.create();
     elem.pos[octtree.x] = queue.xInit;
@@ -185,7 +203,7 @@ queue.add = function(tree, elem) {
     elem.velocity = vec3.create();
     tree.add(elem);
 };
-queue.update = function(elem) {
+queue.update = function(model, elem) {
     var q = model.queues[elem.name];
     var attr;
     for ( var i = 0; i < queue.attributes.length; ++i) {
@@ -193,7 +211,7 @@ queue.update = function(elem) {
         q[attr] = elem[attr];
     }
 };
-queue.remove = function(tree, elem) {
+queue.remove = function(model, tree, elem) {
     tree.del(elem);
     delete model.queues[elem.name];
     queue.yMax = queue.yTop;
@@ -202,7 +220,7 @@ queue.remove = function(tree, elem) {
                 + queue.yIncr);
     }
 };
-queue.render = function(elem, ctx) {
+queue.render = function(model, elem, ctx) {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.font = "" + queue.fontSize + "px sans-serif";
@@ -240,11 +258,7 @@ queue.animate = function(elapsed, elem) {
     if (queue.xBoundary < elem.pos[octtree.x]) {
         queue.pos[octtree.x] = queue.xInit;
         queue.pos[octtree.y] = elem.pos[octtree.y];
-        spring.pull = true;
-        spring.push = false;
-        spring.dampingFactor = 0.1;
-        spring.equilibriumLength = 0;
-        spring.apply(elapsed, elem, queue);
+        queue.spring.apply(elapsed, elem, queue);
     }
 };
 
@@ -252,7 +266,7 @@ var binding = {
     offset : 150,
     fontSize : 12
 };
-binding.render = function(elem, ctx) {
+binding.render = function(model, elem, ctx) {
     var source = model.exchanges[elem.source];
     var destination;
     if (elem.destination_type == "exchange") {
