@@ -41,7 +41,7 @@ model.rebuild = function(tree, configuration) {
     }
     for ( var i in model.exchanges) {
         if (undefined == matched[i]) {
-            exchange.remove(model.exchanges[i]);
+            exchange.remove(tree, model.exchanges[i]);
         }
     }
 
@@ -57,7 +57,7 @@ model.rebuild = function(tree, configuration) {
     }
     for ( var i in model.queues) {
         if (undefined == matched[i]) {
-            queue.remove(model.queues[i]);
+            queue.remove(tree, model.queues[i]);
         }
     }
 
@@ -65,6 +65,7 @@ model.rebuild = function(tree, configuration) {
 };
 
 var exchange = {
+    yTop : 100,
     yMax : 100,
     yIncr : 50,
     xInit : 100,
@@ -100,7 +101,13 @@ exchange.update = function(elem) {
     }
 };
 exchange.remove = function(elem) {
+    tree.del(elem);
     delete model.exchanges[elem.name];
+    exchange.yMax = exchange.yTop;
+    for ( var i in model.exchanges) {
+        exchange.yMax = Math.max(exchange.yMax,
+                model.exchages[i].pos[octtree.y] + exchange.yIncr);
+    }
 };
 exchange.render = function(elem, ctx) {
     ctx.textAlign = "center";
@@ -130,6 +137,9 @@ exchange.render = function(elem, ctx) {
 
     elem.xMin = elem.pos[octtree.x] - (dim.width / 2) - 12;
     elem.xMax = elem.pos[octtree.x] + (dim.width / 2) + 12;
+
+    exchange.yMax = Math.max(exchange.yMax, elem.pos[octtree.y]
+            + exchange.yIncr);
 };
 exchange.animate = function(elapsed, elem) {
     if (exchange.xBoundary > elem.pos[octtree.x]) {
@@ -145,6 +155,7 @@ exchange.animate = function(elapsed, elem) {
 
 var queue = {
     yMax : 100,
+    yTop : 100,
     yIncr : 50,
     xInit : 400,
     xBoundary : 300,
@@ -179,8 +190,14 @@ queue.update = function(elem) {
         q[attr] = elem[attr];
     }
 };
-queue.remove = function(elem) {
+queue.remove = function(tree, elem) {
+    tree.del(elem);
     delete model.queues[elem.name];
+    queue.yMax = queue.yTop;
+    for ( var i in model.queues) {
+        queue.yMax = Math.max(queue.yMax, model.queues[i].pos[octtree.y]
+                + queue.yIncr);
+    }
 };
 queue.render = function(elem, ctx) {
     ctx.textAlign = "center";
@@ -213,6 +230,8 @@ queue.render = function(elem, ctx) {
 
     elem.xMin = elem.pos[octtree.x] - (dim.width / 2) - 12;
     elem.xMax = elem.pos[octtree.x] + (dim.width / 2) + 12;
+
+    queue.yMax = Math.max(queue.yMax, elem.pos[octtree.y] + queue.yIncr);
 };
 queue.animate = function(elapsed, elem) {
     if (queue.xBoundary < elem.pos[octtree.x]) {
