@@ -375,42 +375,45 @@ function Octtree(xMin, xMax, yMin, yMax, zMin, zMax, parent, childId) {
     this.zMax = zMax;
     this.parent = parent;
     this.childId = childId;
-    if (undefined != childId && childId != octtree.lastChildId && undefined != parent) {
-    	this.nextSiblingId = childId + 1;
+    if (undefined != childId && childId != octtree.lastChildId
+            && undefined != parent) {
+        this.nextSiblingId = childId + 1;
     }
 
     this.xMid = xMin + (xMax - xMin) / 2;
     this.yMid = yMin + (yMax - yMin) / 2;
     this.zMid = zMin + (zMax - zMin) / 2;
-
-    this.isEmpty = isEmpty;
-    this.hasChildren = hasChildren;
-    this.hasValue = hasValue;
-    this.add = function(value) {
-        return octtree.add(this, value);
-    };
-    this.del = function(value) {
-        return octtree.del(this, value);
-    };
-    this.update = function() {
-        return octtree.update(this);
-    };
-    this.findInRadius = function(pos, radius, limit) {
-        return octtree.findInRadius(this, pos, radius, limit);
-    };
-    this.size = function() {
-        return octtree.size(this);
-    };
 };
 
-function isEmpty() {
-    return (undefined == this[octtree.firstChildId]) && (undefined == this.value);
-}
+Octtree.prototype.isEmpty = function() {
+    return (undefined == this[octtree.firstChildId])
+            && (undefined == this.value);
+};
 
-function hasChildren() {
+Octtree.prototype.hasChildren = function() {
     return undefined != this[octtree.firstChildId];
-}
+};
 
-function hasValue() {
+Octtree.prototype.hasValue = function() {
     return undefined != this.value;
-}
+};
+
+Octtree.prototype.add = function(value) {
+    return octtree.add(this, value);
+};
+
+Octtree.prototype.del = function(value) {
+    return octtree.del(this, value);
+};
+
+Octtree.prototype.update = function() {
+    return octtree.update(this);
+};
+
+Octtree.prototype.findInRadius = function(pos, radius, limit) {
+    return octtree.findInRadius(this, pos, radius, limit);
+};
+
+Octtree.prototype.size = function() {
+    return octtree.size(this);
+};
