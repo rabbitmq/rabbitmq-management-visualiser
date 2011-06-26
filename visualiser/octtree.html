@@ -6,7 +6,7 @@
 var objs = new Array();
 var objCount = 10000;
 for (var i = 0; i < objCount; ++i) {
-	var o = vec3.create();
+        var o = vec3.create();
     o[octtree.x] = (2000 * Math.random()) - 1000;
     o[octtree.y] = (2000 * Math.random()) - 1000;
     o[octtree.z] = (2000 * Math.random()) - 1000;
@@ -29,19 +29,19 @@ document.write("Insert objects: " + (elapsed / 10) + "ms per " + objCount + " ob
 elapsed = 0;
 var found = 0;
 for (var c = 0; c < 10; ++c) {
-	var o = new Object();
-	o.x = 0; o.y = 0; o.z = 0;
+        var o = new Object();
+        o.x = 0; o.y = 0; o.z = 0;
     var start = (new Date).getTime();
-	for (var i = 0; i < objs.length; ++i) {
-		var results = tree.findInRadius(objs[i].pos, 100);
-		found += results.length;
-	}
+        for (var i = 0; i < objs.length; ++i) {
+                var results = tree.findInRadius(objs[i].pos, 100);
+                found += results.length;
+        }
     var end = (new Date).getTime();
     elapsed += (end - start);
 }
 document.write("Queries: " + (elapsed / (10 * objCount)) +
-	    "ms/query each query found " + (found / (10 * objCount)) +
-	    " objects<br />\n");
+            "ms/query each query found " + (found / (10 * objCount)) +
+            " objects<br />\n");
 </script>
 </head>
 <body>

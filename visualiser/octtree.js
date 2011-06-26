@@ -376,7 +376,7 @@ function Octtree(xMin, xMax, yMin, yMax, zMin, zMax, parent, childId) {
     this.parent = parent;
     this.childId = childId;
     if (undefined != childId && childId != octtree.lastChildId && undefined != parent) {
-    	this.nextSiblingId = childId + 1;
+        this.nextSiblingId = childId + 1;
     }
 
     this.xMid = xMin + (xMax - xMin) / 2;

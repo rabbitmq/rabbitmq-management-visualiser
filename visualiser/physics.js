@@ -35,7 +35,7 @@ spring.apply = function(elapsed, obj1, obj2) {
         vec3.scale(vecOP,
                 (damper * (((1 / distanceOP) * x) / obj1.mass)));
         vec3.add(obj1.velocity, vecOP);
-    }    
+    }
 };
 spring.update = function(elapsed, tree, obj) {
     var damper = spring.dampingFactor * elapsed * 100000;

@@ -42,11 +42,11 @@ exchange.postRender = draggable;
 queue.postRender = draggable;
 
 function draggable(elem, ctx) {
-    var inPath = ctx.isPointInPath(mousePos[octtree.x], mousePos[octtree.y]); 
+    var inPath = ctx.isPointInPath(mousePos[octtree.x], mousePos[octtree.y]);
     if ((inPath && undefined == selected) || selected == elem) {
         ctx.fillStyle = highlight;
         ctx.fill();
-        
+
         if (mouseDown) {
             selected = elem;
             if (undefined == mouseDragOffsetVec) {
@@ -64,7 +64,7 @@ function draggable(elem, ctx) {
     } else {
         ctx.fillStyle = "white";
         ctx.fill();
-    }  
+    }
 };
 
 window.requestAnimFrame = (function() {
@@ -84,13 +84,13 @@ var canvas = undefined;
 function mouseMove(e) {
     var x = 0;
     var y = 0;
-    if (e.pageX || e.pageY) { 
+    if (e.pageX || e.pageY) {
         x = e.pageX;
         y = e.pageY;
-    } else { 
-        x = e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft; 
-        y = e.clientY + document.body.scrollTop + document.documentElement.scrollTop; 
-    } 
+    } else {
+        x = e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
+        y = e.clientY + document.body.scrollTop + document.documentElement.scrollTop;
+    }
     x -= canvas.offsetLeft;
     y -= canvas.offsetTop;
     mousePos[octtree.x] = x;
@@ -156,7 +156,7 @@ function clamp(elem) {
         elem.next_pos[octtree.x] = 1
     };
     if (elem.next_pos[octtree.y] < 1) {
-        elem.next_pos[octtree.y] = 1        
+        elem.next_pos[octtree.y] = 1
     }
     if (elem.next_pos[octtree.x] >= canvas.width) {
         elem.next_pos[octtree.x] = canvas.width - 1;
