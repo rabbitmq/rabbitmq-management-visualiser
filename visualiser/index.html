@@ -129,8 +129,10 @@ function initCanvas(canvas) {
     resizeCanvas();
     canvas.onmousemove = mouseMove;
     canvas.onmousedown = function (e) {
-        mouseDown = true;
-        mouseDragOffsetVec = undefined;
+        if (undefined != hoveringOver) {
+            mouseDown = true;
+            mouseDragOffsetVec = undefined;
+        }
     };
     canvas.onmouseup = function (e) {
         mouseDown = false;
