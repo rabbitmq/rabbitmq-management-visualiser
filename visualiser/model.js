@@ -1,12 +1,20 @@
-var model = {};
-model.exchanges = {};
-model.bindings = {};
-model.queues = {};
-model.connections = {};
-model.channels = {};
-model.rebuild = function(tree, configuration) {
-    model.bindings.source = {};
-    model.bindings.destination = {
+function Model() {
+    this.exchanges = {};
+    this.bindings = {
+        source : {},
+        destination : {
+            "exchange" : {},
+            "queue" : {}
+        }
+    };
+    this.queues = {};
+    this.connections = {};
+    this.channels = {};
+};
+
+Model.prototype.rebuild = function(tree, configuration) {
+    this.bindings.source = {};
+    this.bindings.destination = {
         "exchange" : {},
         "queue" : {}
     };
@@ -14,17 +22,17 @@ model.rebuild = function(tree, configuration) {
     var elem;
     for ( var i = 0; i < configuration.bindings.length; ++i) {
         elem = configuration.bindings[i];
-        if (undefined == model.bindings.source[elem.source]) {
-            model.bindings.source[elem.source] = new Array(elem);
+        if (undefined == this.bindings.source[elem.source]) {
+            this.bindings.source[elem.source] = new Array(elem);
         } else {
-            model.bindings.source[elem.source].push(elem);
+            this.bindings.source[elem.source].push(elem);
         }
 
-        if (undefined == model.bindings.destination[elem.destination_type][elem.destination]) {
-            model.bindings.destination[elem.destination_type][elem.destination] = new Array(
+        if (undefined == this.bindings.destination[elem.destination_type][elem.destination]) {
+            this.bindings.destination[elem.destination_type][elem.destination] = new Array(
                     elem);
         } else {
-            model.bindings.destination[elem.destination_type][elem.destination]
+            this.bindings.destination[elem.destination_type][elem.destination]
                     .push(elem);
         }
     }
@@ -32,32 +40,32 @@ model.rebuild = function(tree, configuration) {
     var matched = {};
     for ( var i = 0; i < configuration.exchanges.length; ++i) {
         elem = configuration.exchanges[i];
-        if (undefined == model.exchanges[elem.name]) {
-            exchange.add(tree, elem);
+        if (undefined == this.exchanges[elem.name]) {
+            exchange.add(this, tree, elem);
         } else {
-            exchange.update(elem);
+            exchange.update(this, elem);
         }
         matched[elem.name] = true;
     }
-    for ( var i in model.exchanges) {
+    for ( var i in this.exchanges) {
         if (undefined == matched[i]) {
-            exchange.remove(model.exchanges[i]);
+            exchange.remove(this, tree, this.exchanges[i]);
         }
     }
 
     matched = {};
     for ( var i = 0; i < configuration.queues.length; ++i) {
         elem = configuration.queues[i];
-        if (undefined == model.queues[elem.name]) {
-            queue.add(tree, elem);
+        if (undefined == this.queues[elem.name]) {
+            queue.add(this, tree, elem);
         } else {
-            queue.update(elem);
+            queue.update(this, elem);
         }
         matched[elem.name] = true;
     }
-    for ( var i in model.queues) {
+    for ( var i in this.queues) {
         if (undefined == matched[i]) {
-            queue.remove(model.queues[i]);
+            queue.remove(this, tree, this.queues[i]);
         }
     }
 
@@ -65,19 +73,29 @@ model.rebuild = function(tree, configuration) {
 };
 
 var exchange = {
+    yTop : 100,
     yMax : 100,
     yIncr : 50,
     xInit : 100,
     xBoundary : 200,
     attributes : [ 'arguments', 'auto_delete', 'durable', 'internal', 'type',
             'message_stats_out', 'message_stats_in' ],
-    pos : vec3.create()
+    pos : vec3.create(),
+    fontSize : 12,
+    spring : new Spring()
 };
+exchange.spring.octtreeLimit = 10;
+exchange.spring.octtreeRadius = 500;
+exchange.spring.equilibriumLength = 0;
+exchange.spring.dampingFactor = 0.1;
+exchange.spring.pull = true;
+exchange.spring.push = false;
+
 exchange.canvasResized = function(canvas) {
     exchange.xInit = canvas.width / 6;
     exchange.xBoundary = 2 * canvas.width / 6;
 };
-exchange.add = function(tree, elem) {
+exchange.add = function(model, tree, elem) {
     model.exchanges[elem.name] = elem;
     elem.pos = vec3.create();
     elem.pos[octtree.x] = exchange.xInit;
@@ -91,7 +109,7 @@ exchange.add = function(tree, elem) {
     elem.velocity = vec3.create();
     tree.add(elem);
 };
-exchange.update = function(elem) {
+exchange.update = function(model, elem) {
     var e = model.exchanges[elem.name];
     var attr;
     for ( var i = 0; i < exchange.attributes.length; ++i) {
@@ -99,64 +117,82 @@ exchange.update = function(elem) {
         e[attr] = elem[attr];
     }
 };
-exchange.remove = function(elem) {
+exchange.remove = function(model, tree, elem) {
+    tree.del(elem);
     delete model.exchanges[elem.name];
+    exchange.yMax = exchange.yTop;
+    for ( var i in model.exchanges) {
+        exchange.yMax = Math.max(exchange.yMax,
+                model.exchages[i].pos[octtree.y] + exchange.yIncr);
+    }
 };
-exchange.render = function(elem, ctx) {
+exchange.render = function(model, elem, ctx) {
+    ctx.beginPath();
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.font = "12px sans-serif";
+    ctx.font = "" + exchange.fontSize + "px sans-serif";
 
     var dim = ctx.measureText(elem.name);
 
     ctx.lineWidth = 2.0;
     ctx.strokeStyle = "black";
 
-    ctx.beginPath();
-    ctx.arc(elem.pos[octtree.x] - (dim.width / 2), elem.pos[octtree.y], 12,
-            Math.PI / 2, 3 * Math.PI / 2, false);
-    ctx.lineTo(elem.pos[octtree.x] + (dim.width / 2), elem.pos[octtree.y] - 12);
+    ctx.arc(elem.pos[octtree.x] - (dim.width / 2), elem.pos[octtree.y],
+            exchange.fontSize, Math.PI / 2, 3 * Math.PI / 2, false);
+    ctx.lineTo(elem.pos[octtree.x] + (dim.width / 2), elem.pos[octtree.y]
+            - exchange.fontSize);
 
-    ctx.arc(elem.pos[octtree.x] + (dim.width / 2), elem.pos[octtree.y], 12,
-            3 * Math.PI / 2, Math.PI / 2, false);
+    ctx.arc(elem.pos[octtree.x] + (dim.width / 2), elem.pos[octtree.y],
+            exchange.fontSize, 3 * Math.PI / 2, Math.PI / 2, false);
     ctx.closePath();
-    if (undefined != exchange.postRender) {
-        exchange.postRender(elem, ctx);
-    }
+
+    exchange.preStroke(elem, ctx);
     ctx.stroke();
 
-    ctx.fillStyle = "black";
+    ctx.beginPath();
+    ctx.fillStyle = ctx.strokeStyle;
     ctx.fillText(elem.name, elem.pos[octtree.x], elem.pos[octtree.y]);
 
-    elem.xMin = elem.pos[octtree.x] - (dim.width / 2) - 12;
-    elem.xMax = elem.pos[octtree.x] + (dim.width / 2) + 12;
+    elem.xMin = elem.pos[octtree.x] - (dim.width / 2) - exchange.fontSize;
+    elem.xMax = elem.pos[octtree.x] + (dim.width / 2) + exchange.fontSize;
+
+    exchange.yMax = Math.max(exchange.yMax, elem.pos[octtree.y]
+            + exchange.yIncr);
+};
+exchange.preStroke = function(elem, ctx) {
 };
 exchange.animate = function(elapsed, elem) {
     if (exchange.xBoundary > elem.pos[octtree.x]) {
         exchange.pos[octtree.x] = exchange.xInit;
         exchange.pos[octtree.y] = elem.pos[octtree.y];
-        spring.pull = true;
-        spring.push = false;
-        spring.dampingFactor = 0.1;
-        spring.equilibriumLength = 0;
-        spring.apply(elapsed, elem, exchange);
+        exchange.spring.apply(elapsed, elem, exchange);
     }
 };
 
 var queue = {
     yMax : 100,
+    yTop : 100,
     yIncr : 50,
     xInit : 400,
     xBoundary : 300,
     attributes : [ 'arguments', 'auto_delete', 'durable', 'messages',
             'messages_ready', 'messages_unacknowledged', 'message_stats' ],
-    pos : vec3.create()
+    pos : vec3.create(),
+    fontSize : 12,
+    spring : new Spring()
 };
+queue.spring.octtreeLimit = 10;
+queue.spring.octtreeRadius = 500;
+queue.spring.equilibriumLength = 0;
+queue.spring.dampingFactor = 0.1;
+queue.spring.pull = true;
+queue.spring.push = false;
+
 queue.canvasResized = function(canvas) {
     queue.xInit = 5 * canvas.width / 6;
     queue.xBoundary = 4 * canvas.width / 6;
 };
-queue.add = function(tree, elem) {
+queue.add = function(model, tree, elem) {
     model.queues[elem.name] = elem;
     elem.pos = vec3.create();
     elem.pos[octtree.x] = queue.xInit;
@@ -171,7 +207,7 @@ queue.add = function(tree, elem) {
     elem.velocity = vec3.create();
     tree.add(elem);
 };
-queue.update = function(elem) {
+queue.update = function(model, elem) {
     var q = model.queues[elem.name];
     var attr;
     for ( var i = 0; i < queue.attributes.length; ++i) {
@@ -179,57 +215,64 @@ queue.update = function(elem) {
         q[attr] = elem[attr];
     }
 };
-queue.remove = function(elem) {
+queue.remove = function(model, tree, elem) {
+    tree.del(elem);
     delete model.queues[elem.name];
+    queue.yMax = queue.yTop;
+    for ( var i in model.queues) {
+        queue.yMax = Math.max(queue.yMax, model.queues[i].pos[octtree.y]
+                + queue.yIncr);
+    }
 };
-queue.render = function(elem, ctx) {
+queue.render = function(model, elem, ctx) {
+    ctx.beginPath();
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.font = "12px sans-serif";
+    ctx.font = "" + queue.fontSize + "px sans-serif";
     var text = elem.name + " (" + elem.messages_ready + ", "
             + elem.messages_unacknowledged + ")";
     var dim = ctx.measureText(text);
 
     ctx.lineWidth = 2.0;
     ctx.strokeStyle = "black";
-    ctx.beginPath();
-    ctx.moveTo(elem.pos[octtree.x] - (dim.width / 2) - 12,
-            elem.pos[octtree.y] - 12);
-    ctx.lineTo(elem.pos[octtree.x] + (dim.width / 2) + 12,
-            elem.pos[octtree.y] - 12);
-    ctx.lineTo(elem.pos[octtree.x] + (dim.width / 2) + 12,
-            elem.pos[octtree.y] + 12);
-    ctx.lineTo(elem.pos[octtree.x] - (dim.width / 2) - 12,
-            elem.pos[octtree.y] + 12);
+    ctx.moveTo(elem.pos[octtree.x] - (dim.width / 2) - queue.fontSize,
+            elem.pos[octtree.y] - queue.fontSize);
+    ctx.lineTo(elem.pos[octtree.x] + (dim.width / 2) + queue.fontSize,
+            elem.pos[octtree.y] - queue.fontSize);
+    ctx.lineTo(elem.pos[octtree.x] + (dim.width / 2) + queue.fontSize,
+            elem.pos[octtree.y] + queue.fontSize);
+    ctx.lineTo(elem.pos[octtree.x] - (dim.width / 2) - queue.fontSize,
+            elem.pos[octtree.y] + queue.fontSize);
     ctx.closePath();
 
-    if (undefined != queue.postRender) {
-        queue.postRender(elem, ctx);
-    }
+    queue.preStroke(elem, ctx);
     ctx.stroke();
 
-    ctx.fillStyle = "black";
+    ctx.beginPath();
+    ctx.fillStyle = ctx.strokeStyle;
     ctx.fillText(text, elem.pos[octtree.x], elem.pos[octtree.y]);
 
-    elem.xMin = elem.pos[octtree.x] - (dim.width / 2) - 12;
-    elem.xMax = elem.pos[octtree.x] + (dim.width / 2) + 12;
+    elem.xMin = elem.pos[octtree.x] - (dim.width / 2) - queue.fontSize;
+    elem.xMax = elem.pos[octtree.x] + (dim.width / 2) + queue.fontSize;
+
+    queue.yMax = Math.max(queue.yMax, elem.pos[octtree.y] + queue.yIncr);
+};
+queue.preStroke = function(elem, ctx) {
 };
 queue.animate = function(elapsed, elem) {
     if (queue.xBoundary < elem.pos[octtree.x]) {
         queue.pos[octtree.x] = queue.xInit;
         queue.pos[octtree.y] = elem.pos[octtree.y];
-        spring.pull = true;
-        spring.push = false;
-        spring.dampingFactor = 0.1;
-        spring.equilibriumLength = 0;
-        spring.apply(elapsed, elem, queue);
+        queue.spring.apply(elapsed, elem, queue);
     }
 };
 
 var binding = {
-    offset : 150
+    offset : 150,
+    fontSize : 12,
+    loopOffset : 50
 };
-binding.render = function(elem, ctx) {
+binding.render = function(model, elem, ctx) {
     var source = model.exchanges[elem.source];
     var destination;
     if (elem.destination_type == "exchange") {
@@ -237,37 +280,50 @@ binding.render = function(elem, ctx) {
     } else {
         destination = model.queues[elem.destination];
     }
+    if (undefined == source || undefined == destination) {
+        return;
+    }
     var xMid = (source.xMax + destination.xMin) / 2;
-    var xMid1 = xMid > (source.xMax + binding.offset) ? xMid : source.xMax
+    var xCtl1 = xMid > (source.xMax + binding.offset) ? xMid : source.xMax
             + binding.offset;
-    var xMid2 = xMid < (destination.xMin - binding.offset) ? xMid
+    var xCtl2 = xMid < (destination.xMin - binding.offset) ? xMid
             : destination.xMin - binding.offset;
+    var yCtl1 = destination == source ? source.pos[octtree.y]
+            - binding.loopOffset : source.pos[octtree.y];
+    var yCtl2 = destination == source ? destination.pos[octtree.y]
+            - binding.loopOffset : destination.pos[octtree.y];
+    ctx.beginPath();
     ctx.lineWidth = 2.0;
     ctx.strokeStyle = "black";
     ctx.moveTo(source.xMax, source.pos[octtree.y]);
-
-    ctx.bezierCurveTo(xMid1, source.pos[octtree.y], xMid2,
-            destination.pos[octtree.y], destination.xMin,
+    ctx.bezierCurveTo(xCtl1, yCtl1, xCtl2, yCtl2, destination.xMin,
             destination.pos[octtree.y]);
+    binding.preStroke(source, destination, ctx);
     ctx.stroke();
 
     // draw an arrow head
     ctx.beginPath();
     ctx.moveTo(destination.xMin, destination.pos[octtree.y]);
-    ctx.lineTo(destination.xMin - 12, destination.pos[octtree.y] + 6);
-    ctx.lineTo(destination.xMin - 12, destination.pos[octtree.y] - 6);
+    ctx.lineTo(destination.xMin - binding.fontSize, destination.pos[octtree.y]
+            + (binding.fontSize / 2));
+    ctx.lineTo(destination.xMin - binding.fontSize, destination.pos[octtree.y]
+            - (binding.fontSize / 2));
     ctx.closePath();
-    ctx.fillStyle = "black";
+    ctx.fillStyle = ctx.strokeStyle;
     ctx.fill();
 
     // draw the binding key
-    var yMid = (source.pos[octtree.y] + destination.pos[octtree.y]) / 2;
-    ctx.font = "12px sans-serif";
+    ctx.beginPath();
+    var yMid = source == destination ? source.pos[octtree.y]
+            - binding.loopOffset + 12
+            : (source.pos[octtree.y] + destination.pos[octtree.y]) / 2;
+    ctx.font = "" + binding.fontSize + "px sans-serif";
     ctx.textBaseline = "middle";
     ctx.textAlign = "center";
-    ctx.lineWidth = 6.0;
+    ctx.lineWidth = binding.fontSize / 2;
     ctx.strokeStyle = "white";
     ctx.strokeText(elem.routing_key, xMid, yMid);
-    ctx.fillStyle = "black";
     ctx.fillText(elem.routing_key, xMid, yMid);
+};
+binding.preStroke = function(source, destination, ctx) {
 };
