@@ -107,6 +107,7 @@ exchange.add = function(model, tree, elem) {
     elem.xMax = elem.pos[octtree.x];
     elem.mass = 0.1;
     elem.velocity = vec3.create();
+    elem.render = true;
     tree.add(elem);
 };
 exchange.update = function(model, elem) {
@@ -127,6 +128,9 @@ exchange.remove = function(model, tree, elem) {
     }
 };
 exchange.render = function(model, elem, ctx) {
+    if (!elem.render) {
+        return;
+    }
     ctx.beginPath();
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -205,6 +209,7 @@ queue.add = function(model, tree, elem) {
     elem.xMax = elem.pos[octtree.x];
     elem.mass = 0.1;
     elem.velocity = vec3.create();
+    elem.render = true;
     tree.add(elem);
 };
 queue.update = function(model, elem) {
@@ -225,6 +230,9 @@ queue.remove = function(model, tree, elem) {
     }
 };
 queue.render = function(model, elem, ctx) {
+    if (!elem.render) {
+        return;
+    }
     ctx.beginPath();
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -281,6 +289,9 @@ binding.render = function(model, elem, ctx) {
         destination = model.queues[elem.destination];
     }
     if (undefined == source || undefined == destination) {
+        return;
+    }
+    if (!(source.render && destination.render)) {
         return;
     }
     var xMid = (source.xMax + destination.xMin) / 2;

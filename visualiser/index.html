@@ -135,14 +135,22 @@ function canvasScroll() {
         e = e.parentNode;
     }
 };
-
+var z;
 function initCanvas(canvas) {
     resizeCanvas();
     canvas.onmousemove = mouseMove;
     canvas.onmousedown = function (e) {
-        if (undefined != hoveringOver) {
-            mouseDown = true;
-            mouseDragOffsetVec = undefined;
+        if (e.ctrlKey && undefined != hoveringOver) {
+            hideExchange(hoveringOver);
+            tree.del(hoveringOver);
+            mouseDown = false;
+            hoveringOver = undefined;
+            dragging = undefined;
+        } else {
+            if (undefined != hoveringOver) {
+                mouseDown = true;
+                mouseDragOffsetVec = undefined;
+            }
         }
     };
     canvas.onmouseup = function (e) {
@@ -277,11 +285,38 @@ function tick() {
 };
 
 function visualisationStart() {
-    canvas = document.getElementById("topology-canvas");
+    canvas = document.getElementById("topology_canvas");
     initCanvas(canvas);
     update();
     tick();
 }
+
+var hiddenExchanges = undefined;
+function showExchanges() {
+    var hiddenExchanges = document.getElementById("hidden_exchanges");
+    var selected = [];
+    for (var i = 0; i < hiddenExchanges.options.length; ++i) {
+        var e = hiddenExchanges.options[i];
+        if (e.selected) {
+            selected.push(e);
+        }
+    }
+    for (var i = 0; i < selected.length; ++i) {
+        hiddenExchanges.remove(selected[i]);
+        model.exchanges[selected[i].value].render = true;
+        tree.add(model.exchanges[selected[i].value]);
+    }
+};
+
+function hideExchange(elem) {
+    if (undefined != model.exchanges[elem.name]) {
+        var optionElem = document.createElement('option');
+        optionElem.text = '"' + elem.name + '"';
+        optionElem.value = elem.name;
+        document.getElementById("hidden_exchanges").add(optionElem);
+        elem.render = false;
+    }
+};
 
 </script>
 <style type="text/css">
@@ -308,6 +343,14 @@ overflow: auto;
 margin: 15px;
 }
 
+.hidden{
+width: 100%;
+}
+
+.show_button{
+float: right;
+}
+
 body{
 margin: 0;
 padding: 0;
@@ -323,11 +366,38 @@ max-height: 100%;
     <div id="side">
         <div class="inner">
             <p id="coords">coords</p>
+            <hr style="clear:both;"/>
+
+            <div>Exchanges
+            <select id="hidden_exchanges" multiple="true" size="8" class="hidden"></select>
+            <button class="show_button" onclick="showExchanges();">Show</button>
+            </div>
+
+            <hr style="clear:both;"/>
+
+            <div class="hidden">Queues
+            <select id="hidden_queues" multiple="true" size="8" class="hidden"></select>
+            <button class="show_button" onclick="showQueues();">Show</button>
+            </div>
+
+            <hr style="clear:both;"/>
+
+            <div class="hidden">Channels
+            <select id="hidden_channels" multiple="true" size="8" class="hidden"></select>
+            <button class="show_button" onclick="showChannels();">Show</button>
+            </div>
+
+            <hr style="clear:both;"/>
+
+            <div class="hidden">Connections
+            <select id="hidden_connections" multiple="true" size="8" class="hidden"></select>
+            <button class="show_button" onclick="showConnections();">Show</button>
+            </div>
         </div>
     </div>
     <div id="main" onscroll="canvasScroll();">
         <div class="inner">
-            <canvas id="topology-canvas"></canvas>
+            <canvas id="topology_canvas"></canvas>
         </div>
     </div>
 </body>
