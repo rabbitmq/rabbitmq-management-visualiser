@@ -169,8 +169,6 @@ function initCanvas(canvas) {
     }
 }
 
-var lastTime = 0;
-
 function drawScene() {
     ctx.lineWidth = 1.0;
     ctx.lineCap = "round";
@@ -193,12 +191,28 @@ function drawScene() {
     }
 };
 
+var eta = 0.1;
+var max_v = 100000;
 function clamp(elem) {
+    var x_vel_abs = Math.abs(elem.velocity[octtree.x]);
+    var y_vel_abs = Math.abs(elem.velocity[octtree.y]);
+    if (0 != x_vel_abs && eta > x_vel_abs) {
+        elem.velocity[octtree.x] = 0;
+    } else if (max_v < x_vel_abs) {
+        elem.velocity[octtree.x] = max_v * (x_vel_abs / elem.velocity[octtree.x]);
+    }
+    if (0 != y_vel_abs && eta > y_vel_abs) {
+        elem.velocity[octtree.y] = 0;
+    } else if (max_v < y_vel_abs) {
+        elem.velocity[octtree.y] = max_v * (y_vel_abs / elem.velocity[octtree.y]);
+    }
     if (elem.next_pos[octtree.x] < 1) {
-        elem.next_pos[octtree.x] = 1
+        elem.next_pos[octtree.x] = 1;
+        elem.velocity[octtree.x] = 0;
     };
     if (elem.next_pos[octtree.y] < 1) {
-        elem.next_pos[octtree.y] = 1
+        elem.next_pos[octtree.y] = 1;
+        elem.velocity[octtree.y] = 0;
     }
     if (elem.next_pos[octtree.x] >= canvas.width) {
         elem.next_pos[octtree.x] = canvas.width - 1;
@@ -216,9 +230,21 @@ spring.dampingFactor = 0.01;
 spring.pull = false;
 spring.push = true;
 
+var rendering = true;
+var lastTime = 0;
+
+function enableRendering() {
+    lastTime = 0;
+    rendering = true;
+}
+
+function disableRendering() {
+    rendering = false;
+}
+
 function animate() {
     var timeNow = new Date().getTime();
-    if (lastTime != 0) {
+    if (lastTime != 0 && rendering) {
         var elapsed = (timeNow - lastTime) / 10000;
         var e;
         for (var i in model.exchanges) {
@@ -293,7 +319,7 @@ max-height: 100%;
 
 </style>
 </head>
-<body onload="visualisationStart();" onresize="resizeCanvas();">
+<body onload="visualisationStart();" onresize="resizeCanvas();" onfocus="enableRendering();" onblur="disableRendering();">
     <div id="side">
         <div class="inner">
             <p id="coords">coords</p>
