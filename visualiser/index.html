@@ -99,29 +99,40 @@ window.requestAnimFrame = (function() {
 
 var ctx = undefined;
 var canvas = undefined;
+var canvasLeft = 0;
+var canvasTop = 0;
+var scrollLeft = 0;
+var scrollTop = 0;
 
 function mouseMove(e) {
-    var x = 0;
-    var y = 0;
-    if (e.pageX || e.pageY) {
-        x = e.pageX;
-        y = e.pageY;
-    } else {
-        x = e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
-        y = e.clientY + document.body.scrollTop + document.documentElement.scrollTop;
-    }
-    x -= canvas.offsetLeft;
-    y -= canvas.offsetTop;
+    var x = e.pageX;
+    var y = e.pageY;
+    x = (x - canvasLeft) + scrollLeft;
+    y = (y - canvasTop) + scrollTop;
     mousePos[octtree.x] = x;
     mousePos[octtree.y] = y;
+    document.getElementById("coords").innerHTML = "" + x + ", " + y;
 };
 
 function resizeCanvas() {
     if (undefined != canvas) {
-        canvas.width = window.document.body.offsetWidth;
-        canvas.height = window.document.body.offsetHeight;
+        canvas.width = canvas.parentNode.offsetWidth;
+        canvas.height = canvas.parentNode.offsetHeight;
         exchange.canvasResized(canvas);
         queue.canvasResized(canvas);
+    }
+};
+
+function canvasScroll() {
+    scrollLeft = 0;
+    scrollTop = 0;
+    var e = canvas.parentNode;
+    while (undefined != e) {
+        if (undefined != e.scrollLeft && undefined != e.scrollTop) {
+            scrollLeft += e.scrollLeft;
+            scrollTop += e.scrollTop;
+        }
+        e = e.parentNode;
     }
 };
 
@@ -139,6 +150,16 @@ function initCanvas(canvas) {
         mouseDragOffsetVec = undefined;
         dragging = undefined;
     };
+    canvasLeft = 0;
+    canvasTop = 0;
+    var e = canvas.parentNode;
+    while (undefined != e) {
+        if (undefined != e.offsetLeft && undefined != e.offsetTop) {
+            canvasLeft += e.offsetLeft;
+            canvasTop += e.offsetTop;
+        }
+        e = e.parentNode;
+    }
     try {
         ctx = canvas.getContext("2d");
     } catch (e) {
@@ -237,8 +258,51 @@ function visualisationStart() {
 }
 
 </script>
+<style type="text/css">
+#side{
+position: absolute;
+top: 0;
+bottom: 0; 
+left: 0;
+width: 16%;
+height: 100%;
+overflow: auto;
+}
+
+#main{
+position: fixed;
+top: 0; 
+left: 16%;
+right: 0;
+bottom: 0;
+overflow: auto; 
+}
+
+.inner{
+margin: 15px;
+}
+
+body{
+margin: 0;
+padding: 0;
+border: 0;
+overflow: hidden;
+height: 100%; 
+max-height: 100%; 
+}
+
+</style>
 </head>
 <body onload="visualisationStart();" onresize="resizeCanvas();">
-    <canvas id="topology-canvas"></canvas>
+    <div id="side">
+        <div class="inner">
+            <p id="coords">coords</p>
+        </div>
+    </div>
+    <div id="main" onscroll="canvasScroll();">
+        <div class="inner">
+            <canvas id="topology-canvas"></canvas>
+        </div>
+    </div>
 </body>
 </html>
