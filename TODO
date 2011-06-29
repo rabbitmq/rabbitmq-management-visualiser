@@ -1,0 +1,10 @@
+optionally render connections
+optionally render channels
+save out text dimensions to avoid recalculating them unnecessarily
+frustrum culling
+there's a bug if the dragged or hovered item gets deleted, you can never highlight anything else
+disabled items should reduce yMax
+use shift-click, not ctl-click as ctl click is already used in safari (ffs)
+toggle switches for turning on/off all of connections/channels/exchanges/queues
+info boxes on hover
+layers of some sort (ugh)
