@@ -49,8 +49,9 @@ Model.prototype.rebuild = function(tree, configuration) {
     }
     for (var i in this.exchanges) {
         if (undefined == matched[i]) {
-            this.exchanges[i].remove(tree);
+            elem = this.exchanges[i];
             delete this.exchanges[i];
+            elem.remove(tree);
         }
     }
 
@@ -66,8 +67,9 @@ Model.prototype.rebuild = function(tree, configuration) {
     }
     for (var i in this.queues) {
         if (undefined == matched[i]) {
-            this.queues[i].remove(tree);
+            elem = this.queues[i];
             delete this.queues[i];
+            elem.remove(tree);
         }
     }
 

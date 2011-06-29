@@ -329,6 +329,13 @@ function disable_fun(elemId) {
 Exchange.prototype.disable = disable_fun("hidden_exchanges");
 Queue.prototype.disable = disable_fun("hidden_queues");
 
+Exchange.prototype.enable = function () {
+    this.remove = this.__proto__.remove;
+};
+Queue.prototype.enable = function () {
+    this.remove = this.__proto__.remove;
+};
+
 </script>
 <style type="text/css">
 #side{
