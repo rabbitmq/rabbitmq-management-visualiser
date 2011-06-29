@@ -149,7 +149,6 @@ Exchange.prototype.render = function(model, ctx) {
     ctx.beginPath();
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.font = "" + this.fontSize + "px sans-serif";
 
     var dim = ctx.measureText(this.name);
 
@@ -256,7 +255,6 @@ Queue.prototype.render = function(model, ctx) {
     ctx.beginPath();
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.font = "" + this.fontSize + "px sans-serif";
     var text = this.name + " (" + this.messages_ready + ", "
             + this.messages_unacknowledged + ")";
     var dim = ctx.measureText(text);
@@ -353,12 +351,14 @@ binding.render = function(model, elem, ctx) {
     var yMid = source == destination ? source.pos[octtree.y]
             - binding.loopOffset + 12
             : (source.pos[octtree.y] + destination.pos[octtree.y]) / 2;
-    ctx.font = "" + binding.fontSize + "px sans-serif";
+    var dim = ctx.measureText(elem.routing_key);
+
     ctx.textBaseline = "middle";
     ctx.textAlign = "center";
-    ctx.lineWidth = binding.fontSize / 2;
-    ctx.strokeStyle = "white";
-    ctx.strokeText(elem.routing_key, xMid, yMid);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.67);"
+    ctx.fillRect(xMid - dim.width/2, yMid - binding.fontSize/2,
+                   dim.width, binding.fontSize);
+    ctx.fillStyle = ctx.strokeStyle;
     ctx.fillText(elem.routing_key, xMid, yMid);
 };
 binding.preStroke = function(source, destination, ctx) {

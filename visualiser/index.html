@@ -98,6 +98,10 @@ var requestAnimFrame = (function() {
   })();
 
 var ctx = undefined;
+var fontSize = 12;
+Exchange.prototype.fontSize = fontSize;
+Queue.prototype.fontSize = fontSize;
+binding.fontSize = fontSize;
 var canvas = undefined;
 var canvasLeft = 0;
 var canvasTop = 0;
@@ -177,6 +181,7 @@ function initCanvas(canvas) {
 }
 
 function drawScene() {
+    ctx.font = "" + fontSize + "px sans-serif";
     ctx.clearRect(0, 0, canvas.width -1, canvas.height -1);
     ctx.lineWidth = 1.0;
     ctx.lineCap = "round";
