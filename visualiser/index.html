@@ -317,8 +317,8 @@ function showQueues() {
     show("hidden_queues", model.queues);
 };
 
-function disable_fun(elemId) {
-    return function () {
+function disable_fun(elemId, postFun) {
+    return function (model) {
         var optionElem = document.createElement('option');
         optionElem.text = '"' + this.name + '"';
         optionElem.value = this.name;
@@ -328,18 +328,24 @@ function disable_fun(elemId) {
             document.getElementById(elemIdCopy).remove(optionElem);
             this.__proto__.remove(tree);
         };
+        postFun(model);
     };
 };
 
-Exchange.prototype.disable = disable_fun("hidden_exchanges");
-Queue.prototype.disable = disable_fun("hidden_queues");
+function enable_fun(postFun) {
+    return function(model) {
+        this.remove = this.__proto__.remove;
+        postFun(model);
+    };
+};
 
-Exchange.prototype.enable = function () {
-    this.remove = this.__proto__.remove;
-};
-Queue.prototype.enable = function () {
-    this.remove = this.__proto__.remove;
-};
+Exchange.prototype.disable =
+    disable_fun("hidden_exchanges", Exchange.prototype.disable);
+Queue.prototype.disable =
+    disable_fun("hidden_queues", Queue.prototype.disable);
+
+Exchange.prototype.enable = enable_fun(Exchange.prototype.enable);
+Queue.prototype.enable = enable_fun(Queue.prototype.enable);
 
 </script>
 <style type="text/css">

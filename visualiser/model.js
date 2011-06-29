@@ -1,5 +1,6 @@
 function Model() {
     this.exchanges = {};
+    this.exchanges_visible = 0;
     this.bindings = {
         source : {},
         destination : {
@@ -8,9 +9,13 @@ function Model() {
         }
     };
     this.queues = {};
+    this.queues_visible = 0;
     this.connections = {};
     this.channels = {};
 };
+
+Model.prototype.permitted_exchanges_visible = 10;
+Model.prototype.permitted_queues_visible = 10;
 
 Model.prototype.rebuild = function(tree, configuration) {
     this.bindings.source = {};
@@ -42,7 +47,10 @@ Model.prototype.rebuild = function(tree, configuration) {
         elem = configuration.exchanges[i];
         if (undefined == this.exchanges[elem.name]) {
             this.exchanges[elem.name] = new Exchange(tree, elem);
-            if (elem.name.slice(0,4) == "amq.") {
+            this.exchanges_visible++;
+            if (elem.name.slice(0,4) == "amq." ||
+                (this.exchanges_visible >
+                 this.permitted_exchanges_visible)) {
                 this.disable(this.exchanges[elem.name], tree);
             }
         } else {
@@ -55,6 +63,9 @@ Model.prototype.rebuild = function(tree, configuration) {
             elem = this.exchanges[i];
             delete this.exchanges[i];
             elem.remove(tree);
+            if (! elem.disabled) {
+                this.exchanges_visible--;
+            }
         }
     }
 
@@ -63,6 +74,11 @@ Model.prototype.rebuild = function(tree, configuration) {
         elem = configuration.queues[i];
         if (undefined == this.queues[elem.name]) {
             this.queues[elem.name] = new Queue(tree, elem);
+            this.queues_visible++;
+            if ((this.queues_visible >
+                 this.permitted_queues_visible)) {
+                this.disable(this.queues[elem.name], tree);
+            }
         } else {
             this.queues[elem.name].update(elem);
         }
@@ -73,18 +89,21 @@ Model.prototype.rebuild = function(tree, configuration) {
             elem = this.queues[i];
             delete this.queues[i];
             elem.remove(tree);
+            if (! elem.disabled) {
+                this.queues_visible--;
+            }
         }
     }
 
     matched = undefined;
 };
 Model.prototype.disable = function(elem, tree) {
-    elem.disable();
+    elem.disable(this);
     tree.del(elem);
     elem.disabled = true;
 };
 Model.prototype.enable = function(elem, tree) {
-    elem.enable();
+    elem.enable(this);
     tree.add(elem);
     elem.disabled = false;
 };
@@ -189,9 +208,11 @@ Exchange.prototype.animate = function(elapsed) {
         this.spring.apply(elapsed, this, this.ideal);
     }
 };
-Exchange.prototype.disable = function() {
+Exchange.prototype.disable = function(model) {
+    model.exchanges_visible--;
 };
-Exchange.prototype.enable = function() {
+Exchange.prototype.enable = function(model) {
+    model.exchanges_visible++;
 };
 
 function Queue(tree, elem) {
@@ -296,9 +317,11 @@ Queue.prototype.animate = function(elapsed) {
         this.spring.apply(elapsed, this, this.ideal);
     }
 };
-Queue.prototype.disable = function() {
+Queue.prototype.disable = function(model) {
+    model.queues_visible--;
 };
-Queue.prototype.enable = function() {
+Queue.prototype.enable = function(model) {
+    model.queues_visible++;
 };
 
 var binding = {
