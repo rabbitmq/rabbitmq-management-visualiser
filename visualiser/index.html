@@ -313,7 +313,7 @@ function hideExchange(elem) {
         var optionElem = document.createElement('option');
         optionElem.text = '"' + elem.name + '"';
         optionElem.value = elem.name;
-        document.getElementById("hidden_exchanges").add(optionElem);
+        document.getElementById("hidden_exchanges").add(optionElem, null);
         elem.render = false;
     }
 };
