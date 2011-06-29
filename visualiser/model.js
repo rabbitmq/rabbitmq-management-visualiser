@@ -42,6 +42,9 @@ Model.prototype.rebuild = function(tree, configuration) {
         elem = configuration.exchanges[i];
         if (undefined == this.exchanges[elem.name]) {
             this.exchanges[elem.name] = new Exchange(tree, elem);
+            if (elem.name.slice(0,4) == "amq.") {
+                this.disable(this.exchanges[elem.name], tree);
+            }
         } else {
             this.exchanges[elem.name].update(elem);
         }
