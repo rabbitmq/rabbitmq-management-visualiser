@@ -38,18 +38,19 @@ Model.prototype.rebuild = function(tree, configuration) {
     }
 
     var matched = {};
-    for ( var i = 0; i < configuration.exchanges.length; ++i) {
+    for (var i = 0; i < configuration.exchanges.length; ++i) {
         elem = configuration.exchanges[i];
         if (undefined == this.exchanges[elem.name]) {
-            exchange.add(this, tree, elem);
+            this.exchanges[elem.name] = new Exchange(tree, elem);
         } else {
-            exchange.update(this, elem);
+            this.exchanges[elem.name].update(elem);
         }
         matched[elem.name] = true;
     }
-    for ( var i in this.exchanges) {
+    for (var i in this.exchanges) {
         if (undefined == matched[i]) {
-            exchange.remove(this, tree, this.exchanges[i]);
+            this.exchanges[i].remove(tree);
+            delete this.exchanges[i];
         }
     }
 
@@ -57,222 +58,244 @@ Model.prototype.rebuild = function(tree, configuration) {
     for ( var i = 0; i < configuration.queues.length; ++i) {
         elem = configuration.queues[i];
         if (undefined == this.queues[elem.name]) {
-            queue.add(this, tree, elem);
+            this.queues[elem.name] = new Queue(tree, elem);
         } else {
-            queue.update(this, elem);
+            this.queues[elem.name].update(elem);
         }
         matched[elem.name] = true;
     }
-    for ( var i in this.queues) {
+    for (var i in this.queues) {
         if (undefined == matched[i]) {
-            queue.remove(this, tree, this.queues[i]);
+            this.queues[i].remove(tree);
+            delete this.queues[i];
         }
     }
 
     matched = undefined;
 };
+Model.prototype.disable = function(elem, tree) {
+    elem.disable();
+    tree.del(elem);
+    elem.disabled = true;
+};
+Model.prototype.enable = function(elem, tree) {
+    elem.enable();
+    tree.add(elem);
+    elem.disabled = false;
+};
 
-var exchange = {
+function Exchange(tree, elem) {
+    this.name = elem.name;
+    this.pos = vec3.create();
+    this.pos[octtree.x] = this.xInit;
+    this.pos[octtree.y] = this.yMax;
+    this.pos[octtree.z] = 0;
+    Exchange.prototype.yMax += this.yIncr;
+    this.next_pos = vec3.create(this.pos);
+    this.xMin = this.pos[octtree.x];
+    this.xMax = this.pos[octtree.x];
+    this.mass = 0.1;
+    this.velocity = vec3.create();
+    this.ideal = { pos : vec3.create() };
+    this.disabled = false;
+    tree.add(this);
+};
+
+Exchange.prototype = {
     yTop : 100,
     yMax : 100,
     yIncr : 50,
     xInit : 100,
     xBoundary : 200,
     attributes : [ 'arguments', 'auto_delete', 'durable', 'internal', 'type',
-            'message_stats_out', 'message_stats_in' ],
+                   'message_stats_out', 'message_stats_in' ],
     pos : vec3.create(),
     fontSize : 12,
     spring : new Spring()
 };
-exchange.spring.octtreeLimit = 10;
-exchange.spring.octtreeRadius = 500;
-exchange.spring.equilibriumLength = 0;
-exchange.spring.dampingFactor = 0.1;
-exchange.spring.pull = true;
-exchange.spring.push = false;
+Exchange.prototype.spring.octtreeLimit = 10;
+Exchange.prototype.spring.octtreeRadius = 500;
+Exchange.prototype.spring.equilibriumLength = 0;
+Exchange.prototype.spring.dampingFactor = 0.1;
+Exchange.prototype.spring.pull = true;
+Exchange.prototype.spring.push = false;
 
-exchange.canvasResized = function(canvas) {
-    exchange.xInit = canvas.width / 6;
-    exchange.xBoundary = 2 * canvas.width / 6;
+Exchange.prototype.canvasResized = function(canvas) {
+    Exchange.prototype.xInit = canvas.width / 6;
+    Exchange.prototype.xBoundary = 2 * canvas.width / 6;
 };
-exchange.add = function(model, tree, elem) {
-    model.exchanges[elem.name] = elem;
-    elem.pos = vec3.create();
-    elem.pos[octtree.x] = exchange.xInit;
-    elem.pos[octtree.y] = exchange.yMax;
-    elem.pos[octtree.z] = 0;
-    exchange.yMax += exchange.yIncr;
-    elem.next_pos = vec3.create(elem.pos);
-    elem.xMin = elem.pos[octtree.x];
-    elem.xMax = elem.pos[octtree.x];
-    elem.mass = 0.1;
-    elem.velocity = vec3.create();
-    elem.render = true;
-    tree.add(elem);
-};
-exchange.update = function(model, elem) {
-    var e = model.exchanges[elem.name];
+Exchange.prototype.update = function(elem) {
     var attr;
-    for ( var i = 0; i < exchange.attributes.length; ++i) {
-        attr = exchange.attributes[i];
-        e[attr] = elem[attr];
+    for ( var i = 0; i < this.attributes.length; ++i) {
+        attr = this.attributes[i];
+        this[attr] = elem[attr];
     }
 };
-exchange.remove = function(model, tree, elem) {
-    tree.del(elem);
-    delete model.exchanges[elem.name];
-    exchange.yMax = exchange.yTop;
-    for ( var i in model.exchanges) {
-        exchange.yMax = Math.max(exchange.yMax,
-                model.exchages[i].pos[octtree.y] + exchange.yIncr);
+Exchange.prototype.remove = function(tree) {
+    tree.del(this);
+    Exchange.prototype.yMax = this.yTop;
+    for (var i in model.exchanges) {
+        Exchange.prototype.yMax =
+            Math.max(Exchange.prototype.yMax,
+                     model.exchages[i].pos[octtree.y] + this.yIncr);
     }
 };
-exchange.render = function(model, elem, ctx) {
-    if (!elem.render) {
+Exchange.prototype.render = function(model, ctx) {
+    if (this.disabled) {
         return;
     }
     ctx.beginPath();
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.font = "" + exchange.fontSize + "px sans-serif";
+    ctx.font = "" + this.fontSize + "px sans-serif";
 
-    var dim = ctx.measureText(elem.name);
+    var dim = ctx.measureText(this.name);
 
     ctx.lineWidth = 2.0;
     ctx.strokeStyle = "black";
 
-    ctx.arc(elem.pos[octtree.x] - (dim.width / 2), elem.pos[octtree.y],
-            exchange.fontSize, Math.PI / 2, 3 * Math.PI / 2, false);
-    ctx.lineTo(elem.pos[octtree.x] + (dim.width / 2), elem.pos[octtree.y]
-            - exchange.fontSize);
+    ctx.arc(this.pos[octtree.x] - (dim.width / 2), this.pos[octtree.y],
+            this.fontSize, Math.PI / 2, 3 * Math.PI / 2, false);
+    ctx.lineTo(this.pos[octtree.x] + (dim.width / 2), this.pos[octtree.y]
+            - this.fontSize);
 
-    ctx.arc(elem.pos[octtree.x] + (dim.width / 2), elem.pos[octtree.y],
-            exchange.fontSize, 3 * Math.PI / 2, Math.PI / 2, false);
+    ctx.arc(this.pos[octtree.x] + (dim.width / 2), this.pos[octtree.y],
+            this.fontSize, 3 * Math.PI / 2, Math.PI / 2, false);
     ctx.closePath();
 
-    exchange.preStroke(elem, ctx);
+    this.preStroke(ctx);
     ctx.stroke();
 
     ctx.beginPath();
     ctx.fillStyle = ctx.strokeStyle;
-    ctx.fillText(elem.name, elem.pos[octtree.x], elem.pos[octtree.y]);
+    ctx.fillText(this.name, this.pos[octtree.x], this.pos[octtree.y]);
 
-    elem.xMin = elem.pos[octtree.x] - (dim.width / 2) - exchange.fontSize;
-    elem.xMax = elem.pos[octtree.x] + (dim.width / 2) + exchange.fontSize;
+    this.xMin = this.pos[octtree.x] - (dim.width / 2) - this.fontSize;
+    this.xMax = this.pos[octtree.x] + (dim.width / 2) + this.fontSize;
 
-    exchange.yMax = Math.max(exchange.yMax, elem.pos[octtree.y]
-            + exchange.yIncr);
+    Exchange.prototype.yMax = Math.max(Exchange.prototype.yMax,
+                                       this.pos[octtree.y] + this.yIncr);
 };
-exchange.preStroke = function(elem, ctx) {
+Exchange.prototype.preStroke = function(ctx) {
 };
-exchange.animate = function(elapsed, elem) {
-    if (exchange.xBoundary > elem.pos[octtree.x]) {
-        exchange.pos[octtree.x] = exchange.xInit;
-        exchange.pos[octtree.y] = elem.pos[octtree.y];
-        exchange.spring.apply(elapsed, elem, exchange);
+Exchange.prototype.animate = function(elapsed) {
+    if (this.xBoundary > this.pos[octtree.x]) {
+        this.ideal.pos[octtree.x] = this.xInit;
+        this.ideal.pos[octtree.y] = this.pos[octtree.y];
+        this.spring.apply(elapsed, this, this.ideal);
     }
 };
+Exchange.prototype.disable = function() {
+};
+Exchange.prototype.enable = function() {
+};
 
-var queue = {
+function Queue(tree, elem) {
+    this.name = elem.name;
+    this.pos = vec3.create();
+    this.pos[octtree.x] = this.xInit;
+    this.pos[octtree.y] = this.yMax;
+    this.pos[octtree.z] = 0;
+    Queue.prototype.yMax += this.yIncr;
+
+    this.next_pos = vec3.create(this.pos);
+    this.xMin = this.pos[octtree.x];
+    this.xMax = this.pos[octtree.x];
+    this.mass = 0.1;
+    this.velocity = vec3.create();
+    this.ideal = { pos : vec3.create() };
+    this.disabled = false;
+    tree.add(this);
+}
+
+Queue.prototype = {
     yMax : 100,
     yTop : 100,
     yIncr : 50,
     xInit : 400,
     xBoundary : 300,
     attributes : [ 'arguments', 'auto_delete', 'durable', 'messages',
-            'messages_ready', 'messages_unacknowledged', 'message_stats' ],
+                   'messages_ready', 'messages_unacknowledged', 'message_stats' ],
     pos : vec3.create(),
     fontSize : 12,
     spring : new Spring()
 };
-queue.spring.octtreeLimit = 10;
-queue.spring.octtreeRadius = 500;
-queue.spring.equilibriumLength = 0;
-queue.spring.dampingFactor = 0.1;
-queue.spring.pull = true;
-queue.spring.push = false;
+Queue.prototype.spring.octtreeLimit = 10;
+Queue.prototype.spring.octtreeRadius = 500;
+Queue.prototype.spring.equilibriumLength = 0;
+Queue.prototype.spring.dampingFactor = 0.1;
+Queue.prototype.spring.pull = true;
+Queue.prototype.spring.push = false;
 
-queue.canvasResized = function(canvas) {
-    queue.xInit = 5 * canvas.width / 6;
-    queue.xBoundary = 4 * canvas.width / 6;
+Queue.prototype.canvasResized = function(canvas) {
+    Queue.prototype.xInit = 5 * canvas.width / 6;
+    Queue.prototype.xBoundary = 4 * canvas.width / 6;
 };
-queue.add = function(model, tree, elem) {
-    model.queues[elem.name] = elem;
-    elem.pos = vec3.create();
-    elem.pos[octtree.x] = queue.xInit;
-    elem.pos[octtree.y] = queue.yMax;
-    elem.pos[octtree.z] = 0;
-    queue.yMax += queue.yIncr;
-
-    elem.next_pos = vec3.create(elem.pos);
-    elem.xMin = elem.pos[octtree.x];
-    elem.xMax = elem.pos[octtree.x];
-    elem.mass = 0.1;
-    elem.velocity = vec3.create();
-    elem.render = true;
-    tree.add(elem);
-};
-queue.update = function(model, elem) {
-    var q = model.queues[elem.name];
+Queue.prototype.update = function(elem) {
     var attr;
-    for ( var i = 0; i < queue.attributes.length; ++i) {
-        attr = queue.attributes[i];
-        q[attr] = elem[attr];
+    for (var i = 0; i < this.attributes.length; ++i) {
+        attr = this.attributes[i];
+        this[attr] = elem[attr];
     }
 };
-queue.remove = function(model, tree, elem) {
-    tree.del(elem);
-    delete model.queues[elem.name];
-    queue.yMax = queue.yTop;
-    for ( var i in model.queues) {
-        queue.yMax = Math.max(queue.yMax, model.queues[i].pos[octtree.y]
-                + queue.yIncr);
+Queue.prototype.remove = function(tree) {
+    tree.del(this);
+    Queue.prototype.yMax = this.yTop;
+    for (var i in model.queues) {
+        Queue.prototype.yMax =
+            Math.max(Queue.prototype.yMax,
+                     model.queues[i].pos[octtree.y] + this.yIncr);
     }
 };
-queue.render = function(model, elem, ctx) {
-    if (!elem.render) {
+Queue.prototype.render = function(model, ctx) {
+    if (this.disabled) {
         return;
     }
     ctx.beginPath();
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.font = "" + queue.fontSize + "px sans-serif";
-    var text = elem.name + " (" + elem.messages_ready + ", "
-            + elem.messages_unacknowledged + ")";
+    ctx.font = "" + this.fontSize + "px sans-serif";
+    var text = this.name + " (" + this.messages_ready + ", "
+            + this.messages_unacknowledged + ")";
     var dim = ctx.measureText(text);
 
     ctx.lineWidth = 2.0;
     ctx.strokeStyle = "black";
-    ctx.moveTo(elem.pos[octtree.x] - (dim.width / 2) - queue.fontSize,
-            elem.pos[octtree.y] - queue.fontSize);
-    ctx.lineTo(elem.pos[octtree.x] + (dim.width / 2) + queue.fontSize,
-            elem.pos[octtree.y] - queue.fontSize);
-    ctx.lineTo(elem.pos[octtree.x] + (dim.width / 2) + queue.fontSize,
-            elem.pos[octtree.y] + queue.fontSize);
-    ctx.lineTo(elem.pos[octtree.x] - (dim.width / 2) - queue.fontSize,
-            elem.pos[octtree.y] + queue.fontSize);
+    ctx.moveTo(this.pos[octtree.x] - (dim.width / 2) - this.fontSize,
+            this.pos[octtree.y] - this.fontSize);
+    ctx.lineTo(this.pos[octtree.x] + (dim.width / 2) + this.fontSize,
+            this.pos[octtree.y] - this.fontSize);
+    ctx.lineTo(this.pos[octtree.x] + (dim.width / 2) + this.fontSize,
+            this.pos[octtree.y] + this.fontSize);
+    ctx.lineTo(this.pos[octtree.x] - (dim.width / 2) - this.fontSize,
+            this.pos[octtree.y] + this.fontSize);
     ctx.closePath();
 
-    queue.preStroke(elem, ctx);
+    this.preStroke(ctx);
     ctx.stroke();
 
     ctx.beginPath();
     ctx.fillStyle = ctx.strokeStyle;
-    ctx.fillText(text, elem.pos[octtree.x], elem.pos[octtree.y]);
+    ctx.fillText(text, this.pos[octtree.x], this.pos[octtree.y]);
 
-    elem.xMin = elem.pos[octtree.x] - (dim.width / 2) - queue.fontSize;
-    elem.xMax = elem.pos[octtree.x] + (dim.width / 2) + queue.fontSize;
+    this.xMin = this.pos[octtree.x] - (dim.width / 2) - this.fontSize;
+    this.xMax = this.pos[octtree.x] + (dim.width / 2) + this.fontSize;
 
-    queue.yMax = Math.max(queue.yMax, elem.pos[octtree.y] + queue.yIncr);
+    Queue.prototype.yMax = Math.max(Queue.prototype.yMax,
+                                    this.pos[octtree.y] + this.yIncr);
 };
-queue.preStroke = function(elem, ctx) {
+Queue.prototype.preStroke = function(ctx) {
 };
-queue.animate = function(elapsed, elem) {
-    if (queue.xBoundary < elem.pos[octtree.x]) {
-        queue.pos[octtree.x] = queue.xInit;
-        queue.pos[octtree.y] = elem.pos[octtree.y];
-        queue.spring.apply(elapsed, elem, queue);
+Queue.prototype.animate = function(elapsed) {
+    if (this.xBoundary < this.pos[octtree.x]) {
+        this.ideal.pos[octtree.x] = this.xInit;
+        this.ideal.pos[octtree.y] = this.pos[octtree.y];
+        this.spring.apply(elapsed, this, this.ideal);
     }
+};
+Queue.prototype.disable = function() {
+};
+Queue.prototype.enable = function() {
 };
 
 var binding = {
@@ -291,7 +314,7 @@ binding.render = function(model, elem, ctx) {
     if (undefined == source || undefined == destination) {
         return;
     }
-    if (!(source.render && destination.render)) {
+    if (source.disabled || destination.disabled) {
         return;
     }
     var xMid = (source.xMax + destination.xMin) / 2;

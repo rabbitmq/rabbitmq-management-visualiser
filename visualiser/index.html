@@ -42,23 +42,23 @@ function updateReady() {
     }
 };
 
-function draggable(elem, ctx) {
+function draggable(ctx) {
     var inPath = ctx.isPointInPath(mousePos[octtree.x], mousePos[octtree.y]);
-    if ((inPath && undefined == hoveringOver) || dragging == elem || hoveringOver == elem) {
+    if ((inPath && undefined == hoveringOver) || dragging == this || hoveringOver == this) {
         ctx.fillStyle = highlight;
         ctx.fill();
 
-        hoveringOver = elem;
+        hoveringOver = this;
         if (mouseDown) {
-            dragging = elem;
+            dragging = this;
             if (undefined == mouseDragOffsetVec) {
-                mouseDragOffsetVec = vec3.create(elem.pos);
+                mouseDragOffsetVec = vec3.create(this.pos);
                 vec3.subtract(mouseDragOffsetVec, mousePos);
             }
-            vec3.set(mousePos, elem.next_pos);
-            vec3.add(elem.next_pos, mouseDragOffsetVec);
-            elem.velocity = vec3.create();
-            clamp(elem);
+            vec3.set(mousePos, this.next_pos);
+            vec3.add(this.next_pos, mouseDragOffsetVec);
+            this.velocity = vec3.create();
+            clamp(this);
         } else if (!inPath) {
             dragging = undefined;
             hoveringOver = undefined;
@@ -68,12 +68,12 @@ function draggable(elem, ctx) {
         ctx.fillStyle = "white";
         ctx.fill();
     }
-    if (undefined != hoveringOver && hoveringOver != elem) {
+    if (undefined != hoveringOver && hoveringOver != this) {
         ctx.strokeStyle = faded;
     }
 };
-exchange.preStroke = draggable;
-queue.preStroke = draggable;
+Exchange.prototype.preStroke = draggable;
+Queue.prototype.preStroke = draggable;
 binding.preStroke = function(source, destination) {
     if (undefined != hoveringOver) {
         if (hoveringOver == source) {
@@ -86,7 +86,7 @@ binding.preStroke = function(source, destination) {
     }
 };
 
-window.requestAnimFrame = (function() {
+var requestAnimFrame = (function() {
     return window.requestAnimationFrame ||
            window.webkitRequestAnimationFrame ||
            window.mozRequestAnimationFrame ||
@@ -118,8 +118,8 @@ function resizeCanvas() {
     if (undefined != canvas) {
         canvas.width = canvas.parentNode.offsetWidth;
         canvas.height = canvas.parentNode.offsetHeight;
-        exchange.canvasResized(canvas);
-        queue.canvasResized(canvas);
+        Exchange.prototype.canvasResized(canvas);
+        Queue.prototype.canvasResized(canvas);
     }
 };
 
@@ -135,14 +135,13 @@ function canvasScroll() {
         e = e.parentNode;
     }
 };
-var z;
+
 function initCanvas(canvas) {
     resizeCanvas();
     canvas.onmousemove = mouseMove;
     canvas.onmousedown = function (e) {
         if (e.ctrlKey && undefined != hoveringOver) {
-            hideExchange(hoveringOver);
-            tree.del(hoveringOver);
+            model.disable(hoveringOver, tree);
             mouseDown = false;
             hoveringOver = undefined;
             dragging = undefined;
@@ -178,18 +177,17 @@ function initCanvas(canvas) {
 }
 
 function drawScene() {
+    ctx.clearRect(0, 0, canvas.width -1, canvas.height -1);
     ctx.lineWidth = 1.0;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     ctx.strokeStyle = "black";
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeRect(0, 0, canvas.width, canvas.height);
-    var e;
+    ctx.strokeRect(0, 0, canvas.width -1, canvas.height -1);
     for (var i in model.exchanges) {
-        exchange.render(model, model.exchanges[i], ctx);
+        model.exchanges[i].render(model, ctx);
     }
     for (var i in model.queues) {
-        queue.render(model, model.queues[i], ctx);
+        model.queues[i].render(model, ctx);
     }
     for (var i in model.bindings.source) {
         var ary = model.bindings.source[i];
@@ -257,8 +255,8 @@ function animate() {
         var e;
         for (var i in model.exchanges) {
             e = model.exchanges[i];
-            if (undefined == dragging || dragging != e) {
-                exchange.animate(elapsed, e);
+            if ((undefined == dragging || dragging != e) && ! e.disabled) {
+                e.animate(elapsed);
                 newton.update(elapsed, e);
                 spring.update(elapsed, tree, e);
                 clamp(e);
@@ -266,8 +264,8 @@ function animate() {
         }
         for (var i in model.queues) {
             e = model.queues[i];
-            if (undefined == dragging || dragging != e) {
-                queue.animate(elapsed, e);
+            if ((undefined == dragging || dragging != e) && ! e.disabled) {
+                e.animate(elapsed);
                 newton.update(elapsed, e);
                 spring.update(elapsed, tree, e);
                 clamp(e);
@@ -279,9 +277,9 @@ function animate() {
 };
 
 function tick() {
-    requestAnimFrame(tick);
     drawScene();
     animate();
+    requestAnimFrame(tick);
 };
 
 function visualisationStart() {
@@ -291,39 +289,52 @@ function visualisationStart() {
     tick();
 }
 
-var hiddenExchanges = undefined;
-function showExchanges() {
-    var hiddenExchanges = document.getElementById("hidden_exchanges");
+function show(elemId, modelElem) {
+    var hidden = document.getElementById(elemId);
     var selected = [];
-    for (var i = 0; i < hiddenExchanges.options.length; ++i) {
-        var e = hiddenExchanges.options[i];
+    for (var i = 0; i < hidden.options.length; ++i) {
+        var e = hidden.options[i];
         if (e.selected) {
+            model.enable(modelElem[e.value], tree);
             selected.push(e);
         }
     }
     for (var i = 0; i < selected.length; ++i) {
-        hiddenExchanges.remove(selected[i]);
-        model.exchanges[selected[i].value].render = true;
-        tree.add(model.exchanges[selected[i].value]);
+        hidden.remove(selected[i]);
     }
 };
 
-function hideExchange(elem) {
-    if (undefined != model.exchanges[elem.name]) {
-        var optionElem = document.createElement('option');
-        optionElem.text = '"' + elem.name + '"';
-        optionElem.value = elem.name;
-        document.getElementById("hidden_exchanges").add(optionElem, null);
-        elem.render = false;
-    }
+function showExchanges() {
+    show("hidden_exchanges", model.exchanges);
 };
+
+function showQueues() {
+    show("hidden_queues", model.queues);
+};
+
+function disable_fun(elemId) {
+    return function () {
+        var optionElem = document.createElement('option');
+        optionElem.text = '"' + this.name + '"';
+        optionElem.value = this.name;
+        document.getElementById(elemId).add(optionElem, null);
+        var elemIdCopy = elemId;
+        this.remove = function (tree) {
+            document.getElementById(elemIdCopy).remove(optionElem);
+            this.__proto__.remove(tree);
+        };
+    };
+};
+
+Exchange.prototype.disable = disable_fun("hidden_exchanges");
+Queue.prototype.disable = disable_fun("hidden_queues");
 
 </script>
 <style type="text/css">
 #side{
 position: absolute;
 top: 0;
-bottom: 0; 
+bottom: 0;
 left: 0;
 width: 16%;
 height: 100%;
