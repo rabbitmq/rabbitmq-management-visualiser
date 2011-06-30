@@ -141,6 +141,7 @@ function canvasScroll() {
 };
 
 function initCanvas(canvas) {
+    canvasScroll();
     resizeCanvas();
     canvas.onmousemove = mouseMove;
     canvas.onmousedown = function (e) {
@@ -366,6 +367,9 @@ left: 16%;
 right: 0;
 bottom: 0;
 overflow: auto;
+margin: 0;
+padding: 0;
+border: 0;
 }
 
 .inner{
@@ -425,9 +429,7 @@ max-height: 100%;
         </div>
     </div>
     <div id="main" onscroll="canvasScroll();">
-        <div class="inner">
-            <canvas id="topology_canvas"></canvas>
-        </div>
+        <canvas id="topology_canvas"></canvas>
     </div>
 </body>
 </html>

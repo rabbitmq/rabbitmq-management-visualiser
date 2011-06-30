@@ -381,7 +381,7 @@ binding.render = function(model, elem, ctx) {
 
     ctx.textBaseline = "middle";
     ctx.textAlign = "center";
-    ctx.fillStyle = "rgba(255, 255, 255, 0.67);"
+    ctx.fillStyle = "rgba(255, 255, 255, 0.67);";
     ctx.fillRect(xMid - dim.width/2, yMid - binding.fontSize/2,
                    dim.width, binding.fontSize);
     ctx.fillStyle = ctx.strokeStyle;
