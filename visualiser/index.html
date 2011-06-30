@@ -71,18 +71,46 @@ function draggable(ctx) {
     if (undefined != hoveringOver && hoveringOver != this) {
         ctx.strokeStyle = faded;
     }
+    ctx.stroke();
 };
 Exchange.prototype.preStroke = draggable;
 Queue.prototype.preStroke = draggable;
 Binding.prototype.preStroke = function(source, destination, ctx) {
-    if (undefined != hoveringOver) {
+    var drawBindingKeys = false;
+    if (undefined == hoveringOver) {
+        drawBindingKeys = ctx.isPointInPath(mousePos[octtree.x], mousePos[octtree.y]);
+    } else {
         if (hoveringOver == source) {
             ctx.strokeStyle = "#0000a0";
+            drawBindingKeys = true;
         } else if (hoveringOver == destination) {
             ctx.strokeStyle = "#00a000";
+            drawBindingKeys = true;
         } else {
             ctx.strokeStyle = faded;
         }
+    }
+    ctx.stroke();
+
+    if (drawBindingKeys) {
+        ctx.beginPath();
+        var xMid = (source.xMax + destination.xMin) / 2;
+        var yMid = source == destination ? source.pos[octtree.y]
+            - this.loopOffset + 12
+            : (source.pos[octtree.y] + destination.pos[octtree.y]) / 2;
+        var bindingKey = "";
+        for (var k in this.keys) {
+            bindingKey += ", " + k;
+        }
+        bindingKey = bindingKey.slice(2);
+        var dim = ctx.measureText(bindingKey);
+
+        ctx.textBaseline = "middle";
+        ctx.textAlign = "center";
+        ctx.fillStyle = "rgba(255, 255, 255, 0.67);";
+        ctx.fillRect(xMid - dim.width/2, yMid - this.fontSize/2, dim.width, this.fontSize);
+        ctx.fillStyle = ctx.strokeStyle;
+        ctx.fillText(bindingKey, xMid, yMid);
     }
 };
 

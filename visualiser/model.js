@@ -66,39 +66,58 @@ Model.prototype.rebuild = function(tree, configuration) {
     }
 
     var binding;
-    for (var i in this.exchange) {
-        this.exchange[i].bindings_outbound = { exchange : {}, queue : {} };
-        this.exchange[i].bindings_inbound = {};
-    }
-    for (var i in this.queue) {
-        this.queue[i].bindings_inbound = {};
-    }
+    var bindings = {};
     for (var i = 0; i < configuration.bindings.length; ++i) {
         elem = configuration.bindings[i];
-        var src;
-        var dest;
-        if (undefined == this.exchange[elem.source]) {
+        if (undefined == this.exchange[elem.source] ||
+            undefined == this[elem.destination_type][elem.destination]) {
             continue;
-        } else {
-            src = this.exchange[elem.source].bindings_outbound[elem.destination_type];
         }
-        if (undefined == this[elem.destination_type][elem.destination]) {
-            continue;
-        } else {
-            dest = this[elem.destination_type][elem.destination].bindings_inbound;
+        if (undefined == bindings[elem.source]) {
+            bindings[elem.source] = { exchange : {}, queue : {} };
         }
-
-        if (undefined == src[elem.destination]) {
-            src[elem.destination] = new Binding(elem);
+        var source = bindings[elem.source];
+        if (undefined == source[elem.destination_type][elem.destination]) {
+            source[elem.destination_type][elem.destination] = new Array(elem);
         } else {
-            src[elem.destination].update(elem);
-        }
-        binding = src[elem.destination];
-        if (undefined == dest[elem.source]) {
-            dest[elem.source] = binding;
+            source[elem.destination_type][elem.destination].push(elem);
         }
     }
 
+    for (var source in bindings) {
+        var src = this.exchange[source].bindings_outbound;
+        var i = bindings[source];
+        for (var destination_type in i) {
+            var j = i[destination_type];
+            var src1 = src[destination_type];
+            for (var destination in j) {
+                var dest = this[destination_type][destination].bindings_inbound;
+                if (undefined == src1[destination]) {
+                    src1[destination] = new Binding(j[destination])
+                } else {
+                    src1[destination].set(j[destination]);
+                }
+                binding = src1[destination];
+                if (undefined == dest[source]) {
+                    dest[source] = binding;
+                }
+            }
+        }
+    }
+    for (var src in this.exchange) {
+        for (var dest_type in this.exchange[src].bindings_outbound) {
+            for (var dest in this.exchange[src].bindings_outbound[dest_type]) {
+                binding = this.exchange[src].bindings_outbound[dest_type][dest];
+                if (undefined == bindings[binding.source] ||
+                    undefined == bindings[binding.source][binding.destination_type] ||
+                    undefined == bindings[binding.source][binding.destination_type][binding.destination]) {
+                    delete this.exchange[src].bindings_outbound[dest_type][dest];
+                    delete this[binding.destination_type][binding.destination].bindings_inbound[binding.source];
+                }
+            }
+        }
+    }
+    bindings = undefined;
     matched = undefined;
 };
 Model.prototype.disable = function(elem, tree) {
@@ -202,7 +221,6 @@ Exchange.prototype.render = function(model, ctx) {
     ctx.closePath();
 
     this.preStroke(ctx);
-    ctx.stroke();
 
     ctx.beginPath();
     ctx.fillStyle = ctx.strokeStyle;
@@ -320,7 +338,6 @@ Queue.prototype.render = function(model, ctx) {
     ctx.closePath();
 
     this.preStroke(ctx);
-    ctx.stroke();
 
     ctx.beginPath();
     ctx.fillStyle = ctx.strokeStyle;
@@ -348,9 +365,10 @@ Queue.prototype.enable = function(model) {
     model.queues_visible++;
 };
 
-function Binding(elem) {
+function Binding(elems) {
     this.keys = {};
-    this.update(elem);
+    this.set(elems);
+    var elem = elems.shift();
     this.source = elem.source;
     this.destination_type = elem.destination_type;
     this.destination = elem.destination;
@@ -361,12 +379,16 @@ Binding.prototype = {
     fontSize : 12,
     loopOffset : 50
 };
-Binding.prototype.update = function(elem) {
-    this.keys[elem.routing_key] = {};
-    var attr;
-    for (var i = 0; i < this.attributes.length; ++i) {
-        attr = this.attributes[i];
-        this.keys[elem.routing_key][attr] = elem[attr];
+Binding.prototype.set = function(elems) {
+    this.keys = {};
+    for (var i = 0; i < elems.length; ++i) {
+        var elem = elems[i];
+        this.keys[elem.routing_key] = {};
+        var attr;
+        for (var j = 0; j < this.attributes.length; ++j) {
+            attr = this.attributes[j];
+            this.keys[elem.routing_key][attr] = elem[attr];
+        }
     }
 };
 Binding.prototype.render = function(model, ctx) {
@@ -393,13 +415,15 @@ Binding.prototype.render = function(model, ctx) {
     var yCtl2 = destination == source ? destination.pos[octtree.y]
             - this.loopOffset : destination.pos[octtree.y];
     ctx.beginPath();
-    ctx.lineWidth = 2.0;
+    ctx.lineWidth = 1.0;
     ctx.strokeStyle = "black";
     ctx.moveTo(source.xMax, source.pos[octtree.y]);
     ctx.bezierCurveTo(xCtl1, yCtl1, xCtl2, yCtl2, destination.xMin,
             destination.pos[octtree.y]);
+    ctx.moveTo(destination.xMin, destination.pos[octtree.y]+1);
+    ctx.bezierCurveTo(xCtl2, yCtl2+1, xCtl1, yCtl1+1, source.xMax,
+            source.pos[octtree.y]+1);
     this.preStroke(source, destination, ctx);
-    ctx.stroke();
 
     // draw an arrow head
     ctx.beginPath();
@@ -411,26 +435,6 @@ Binding.prototype.render = function(model, ctx) {
     ctx.closePath();
     ctx.fillStyle = ctx.strokeStyle;
     ctx.fill();
-
-    // draw the binding key
-    ctx.beginPath();
-    var yMid = source == destination ? source.pos[octtree.y]
-            - this.loopOffset + 12
-            : (source.pos[octtree.y] + destination.pos[octtree.y]) / 2;
-    var bindingKey = "";
-    for (var k in this.keys) {
-        bindingKey += ", " + k;
-    }
-    bindingKey = bindingKey.slice(2);
-    var dim = ctx.measureText(bindingKey);
-
-    ctx.textBaseline = "middle";
-    ctx.textAlign = "center";
-    ctx.fillStyle = "rgba(255, 255, 255, 0.67);";
-    ctx.fillRect(xMid - dim.width/2, yMid - this.fontSize/2,
-                   dim.width, this.fontSize);
-    ctx.fillStyle = ctx.strokeStyle;
-    ctx.fillText(bindingKey, xMid, yMid);
 };
 Binding.prototype.preStroke = function(source, destination, ctx) {
 };
