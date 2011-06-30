@@ -112,7 +112,9 @@ Model.prototype.rebuild = function(tree, configuration) {
                     undefined == bindings[binding.source][binding.destination_type] ||
                     undefined == bindings[binding.source][binding.destination_type][binding.destination]) {
                     delete this.exchange[src].bindings_outbound[dest_type][dest];
-                    delete this[binding.destination_type][binding.destination].bindings_inbound[binding.source];
+                    if (undefined != this[binding.destination_type][binding.destination]) {
+                        delete this[binding.destination_type][binding.destination].bindings_inbound[binding.source];
+                    }
                 }
             }
         }

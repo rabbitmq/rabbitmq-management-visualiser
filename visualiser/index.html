@@ -336,10 +336,15 @@ function disable_fun(elemId, postFun) {
         var optionElem = document.createElement('option');
         optionElem.text = '"' + this.name + '"';
         optionElem.value = this.name;
-        document.getElementById(elemId).add(optionElem, null);
-        var elemIdCopy = elemId;
+        var elem = document.getElementById(elemId);
+        elem.add(optionElem, null);
         this.remove = function (tree) {
-            document.getElementById(elemIdCopy).remove(optionElem);
+            for (var i = 0; i < elem.options.length; ++i) {
+                if (elem.options[i].value == this.name) {
+                    elem.remove(i);
+                    break;
+                }
+            }
             this.__proto__.remove(tree);
         };
         postFun(model);
