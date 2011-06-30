@@ -74,7 +74,7 @@ function draggable(ctx) {
 };
 Exchange.prototype.preStroke = draggable;
 Queue.prototype.preStroke = draggable;
-binding.preStroke = function(source, destination) {
+Binding.prototype.preStroke = function(source, destination, ctx) {
     if (undefined != hoveringOver) {
         if (hoveringOver == source) {
             ctx.strokeStyle = "#0000a0";
@@ -101,7 +101,7 @@ var ctx = undefined;
 var fontSize = 12;
 Exchange.prototype.fontSize = fontSize;
 Queue.prototype.fontSize = fontSize;
-binding.fontSize = fontSize;
+Binding.prototype.fontSize = fontSize;
 var canvas = undefined;
 var canvasLeft = 0;
 var canvasTop = 0;
@@ -144,7 +144,7 @@ function initCanvas(canvas) {
     resizeCanvas();
     canvas.onmousemove = mouseMove;
     canvas.onmousedown = function (e) {
-        if (e.ctrlKey && undefined != hoveringOver) {
+        if (e.shiftKey && undefined != hoveringOver) {
             model.disable(hoveringOver, tree);
             mouseDown = false;
             hoveringOver = undefined;
@@ -188,18 +188,7 @@ function drawScene() {
     ctx.lineJoin = "round";
     ctx.strokeStyle = "black";
     ctx.strokeRect(0, 0, canvas.width -1, canvas.height -1);
-    for (var i in model.exchanges) {
-        model.exchanges[i].render(model, ctx);
-    }
-    for (var i in model.queues) {
-        model.queues[i].render(model, ctx);
-    }
-    for (var i in model.bindings.source) {
-        var ary = model.bindings.source[i];
-        for (var j = 0; j < ary.length; ++j) {
-            binding.render(model, ary[j], ctx);
-        }
-    }
+    model.render(ctx);
 };
 
 var eta = 0.1;
@@ -258,8 +247,8 @@ function animate() {
     if (lastTime != 0 && rendering) {
         var elapsed = (timeNow - lastTime) / 10000;
         var e;
-        for (var i in model.exchanges) {
-            e = model.exchanges[i];
+        for (var i in model.exchange) {
+            e = model.exchange[i];
             if ((undefined == dragging || dragging != e) && ! e.disabled) {
                 e.animate(elapsed);
                 newton.update(elapsed, e);
@@ -267,8 +256,8 @@ function animate() {
                 clamp(e);
             }
         }
-        for (var i in model.queues) {
-            e = model.queues[i];
+        for (var i in model.queue) {
+            e = model.queue[i];
             if ((undefined == dragging || dragging != e) && ! e.disabled) {
                 e.animate(elapsed);
                 newton.update(elapsed, e);
@@ -296,25 +285,22 @@ function visualisationStart() {
 
 function show(elemId, modelElem) {
     var hidden = document.getElementById(elemId);
-    var selected = [];
     for (var i = 0; i < hidden.options.length; ++i) {
         var e = hidden.options[i];
         if (e.selected) {
             model.enable(modelElem[e.value], tree);
-            selected.push(e);
+            hidden.remove(i);
+            --i;
         }
-    }
-    for (var i = 0; i < selected.length; ++i) {
-        hidden.remove(selected[i]);
     }
 };
 
 function showExchanges() {
-    show("hidden_exchanges", model.exchanges);
+    show("hidden_exchanges", model.exchange);
 };
 
 function showQueues() {
-    show("hidden_queues", model.queues);
+    show("hidden_queues", model.queue);
 };
 
 function disable_fun(elemId, postFun) {

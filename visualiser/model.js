@@ -1,14 +1,7 @@
 function Model() {
-    this.exchanges = {};
+    this.exchange = {};
     this.exchanges_visible = 0;
-    this.bindings = {
-        source : {},
-        destination : {
-            "exchange" : {},
-            "queue" : {}
-        }
-    };
-    this.queues = {};
+    this.queue = {};
     this.queues_visible = 0;
     this.connections = {};
     this.channels = {};
@@ -18,50 +11,27 @@ Model.prototype.permitted_exchanges_visible = 10;
 Model.prototype.permitted_queues_visible = 10;
 
 Model.prototype.rebuild = function(tree, configuration) {
-    this.bindings.source = {};
-    this.bindings.destination = {
-        "exchange" : {},
-        "queue" : {}
-    };
-
     var elem;
-    for ( var i = 0; i < configuration.bindings.length; ++i) {
-        elem = configuration.bindings[i];
-        if (undefined == this.bindings.source[elem.source]) {
-            this.bindings.source[elem.source] = new Array(elem);
-        } else {
-            this.bindings.source[elem.source].push(elem);
-        }
-
-        if (undefined == this.bindings.destination[elem.destination_type][elem.destination]) {
-            this.bindings.destination[elem.destination_type][elem.destination] = new Array(
-                    elem);
-        } else {
-            this.bindings.destination[elem.destination_type][elem.destination]
-                    .push(elem);
-        }
-    }
-
     var matched = {};
     for (var i = 0; i < configuration.exchanges.length; ++i) {
         elem = configuration.exchanges[i];
-        if (undefined == this.exchanges[elem.name]) {
-            this.exchanges[elem.name] = new Exchange(tree, elem);
+        if (undefined == this.exchange[elem.name]) {
+            this.exchange[elem.name] = new Exchange(tree, elem);
             this.exchanges_visible++;
             if (elem.name.slice(0,4) == "amq." ||
                 (this.exchanges_visible >
                  this.permitted_exchanges_visible)) {
-                this.disable(this.exchanges[elem.name], tree);
+                this.disable(this.exchange[elem.name], tree);
             }
         } else {
-            this.exchanges[elem.name].update(elem);
+            this.exchange[elem.name].update(elem);
         }
         matched[elem.name] = true;
     }
-    for (var i in this.exchanges) {
+    for (var i in this.exchange) {
         if (undefined == matched[i]) {
-            elem = this.exchanges[i];
-            delete this.exchanges[i];
+            elem = this.exchange[i];
+            delete this.exchange[i];
             elem.remove(tree);
             if (! elem.disabled) {
                 this.exchanges_visible--;
@@ -70,28 +40,62 @@ Model.prototype.rebuild = function(tree, configuration) {
     }
 
     matched = {};
-    for ( var i = 0; i < configuration.queues.length; ++i) {
+    for (var i = 0; i < configuration.queues.length; ++i) {
         elem = configuration.queues[i];
-        if (undefined == this.queues[elem.name]) {
-            this.queues[elem.name] = new Queue(tree, elem);
+        if (undefined == this.queue[elem.name]) {
+            this.queue[elem.name] = new Queue(tree, elem);
             this.queues_visible++;
             if ((this.queues_visible >
                  this.permitted_queues_visible)) {
-                this.disable(this.queues[elem.name], tree);
+                this.disable(this.queue[elem.name], tree);
             }
         } else {
-            this.queues[elem.name].update(elem);
+            this.queue[elem.name].update(elem);
         }
         matched[elem.name] = true;
     }
-    for (var i in this.queues) {
+    for (var i in this.queue) {
         if (undefined == matched[i]) {
-            elem = this.queues[i];
-            delete this.queues[i];
+            elem = this.queue[i];
+            delete this.queue[i];
             elem.remove(tree);
             if (! elem.disabled) {
                 this.queues_visible--;
             }
+        }
+    }
+
+    var binding;
+    for (var i in this.exchange) {
+        this.exchange[i].bindings_outbound = { exchange : {}, queue : {} };
+        this.exchange[i].bindings_inbound = {};
+    }
+    for (var i in this.queue) {
+        this.queue[i].bindings_inbound = {};
+    }
+    for (var i = 0; i < configuration.bindings.length; ++i) {
+        elem = configuration.bindings[i];
+        var src;
+        var dest;
+        if (undefined == this.exchange[elem.source]) {
+            continue;
+        } else {
+            src = this.exchange[elem.source].bindings_outbound[elem.destination_type];
+        }
+        if (undefined == this[elem.destination_type][elem.destination]) {
+            continue;
+        } else {
+            dest = this[elem.destination_type][elem.destination].bindings_inbound;
+        }
+
+        if (undefined == src[elem.destination]) {
+            src[elem.destination] = new Binding(elem);
+        } else {
+            src[elem.destination].update(elem);
+        }
+        binding = src[elem.destination];
+        if (undefined == dest[elem.source]) {
+            dest[elem.source] = binding;
         }
     }
 
@@ -106,6 +110,14 @@ Model.prototype.enable = function(elem, tree) {
     elem.enable(this);
     tree.add(elem);
     elem.disabled = false;
+};
+Model.prototype.render = function(ctx) {
+    for (var i in this.exchange) {
+        model.exchange[i].render(this, ctx);
+    }
+    for (var i in this.queue) {
+        model.queue[i].render(this, ctx);
+    }
 };
 
 function Exchange(tree, elem) {
@@ -122,6 +134,9 @@ function Exchange(tree, elem) {
     this.velocity = vec3.create();
     this.ideal = { pos : vec3.create() };
     this.disabled = false;
+    this.bindings_outbound = { exchange : {}, queue : {} };
+    this.bindings_inbound = {};
+    this.update(elem);
     tree.add(this);
 };
 
@@ -150,7 +165,7 @@ Exchange.prototype.canvasResized = function(canvas) {
 };
 Exchange.prototype.update = function(elem) {
     var attr;
-    for ( var i = 0; i < this.attributes.length; ++i) {
+    for (var i = 0; i < this.attributes.length; ++i) {
         attr = this.attributes[i];
         this[attr] = elem[attr];
     }
@@ -158,10 +173,10 @@ Exchange.prototype.update = function(elem) {
 Exchange.prototype.remove = function(tree) {
     tree.del(this);
     Exchange.prototype.yMax = this.yTop;
-    for (var i in model.exchanges) {
+    for (var i in model.exchange) {
         Exchange.prototype.yMax =
             Math.max(Exchange.prototype.yMax,
-                     model.exchages[i].pos[octtree.y] + this.yIncr);
+                     model.exchange[i].pos[octtree.y] + this.yIncr);
     }
 };
 Exchange.prototype.render = function(model, ctx) {
@@ -198,6 +213,13 @@ Exchange.prototype.render = function(model, ctx) {
 
     Exchange.prototype.yMax = Math.max(Exchange.prototype.yMax,
                                        this.pos[octtree.y] + this.yIncr);
+
+    for (var i in this.bindings_outbound.exchange) {
+        this.bindings_outbound.exchange[i].render(model, ctx);
+    }
+    for (var i in this.bindings_outbound.queue) {
+        this.bindings_outbound.queue[i].render(model, ctx);
+    }
 };
 Exchange.prototype.preStroke = function(ctx) {
 };
@@ -230,6 +252,8 @@ function Queue(tree, elem) {
     this.velocity = vec3.create();
     this.ideal = { pos : vec3.create() };
     this.disabled = false;
+    this.bindings_inbound = {};
+    this.update(elem);
     tree.add(this);
 }
 
@@ -266,10 +290,10 @@ Queue.prototype.update = function(elem) {
 Queue.prototype.remove = function(tree) {
     tree.del(this);
     Queue.prototype.yMax = this.yTop;
-    for (var i in model.queues) {
+    for (var i in model.queue) {
         Queue.prototype.yMax =
             Math.max(Queue.prototype.yMax,
-                     model.queues[i].pos[octtree.y] + this.yIncr);
+                     model.queue[i].pos[octtree.y] + this.yIncr);
     }
 };
 Queue.prototype.render = function(model, ctx) {
@@ -324,18 +348,34 @@ Queue.prototype.enable = function(model) {
     model.queues_visible++;
 };
 
-var binding = {
+function Binding(elem) {
+    this.keys = {};
+    this.update(elem);
+    this.source = elem.source;
+    this.destination_type = elem.destination_type;
+    this.destination = elem.destination;
+};
+Binding.prototype = {
+    attributes : [ 'arguments' ],
     offset : 150,
     fontSize : 12,
     loopOffset : 50
 };
-binding.render = function(model, elem, ctx) {
-    var source = model.exchanges[elem.source];
+Binding.prototype.update = function(elem) {
+    this.keys[elem.routing_key] = {};
+    var attr;
+    for (var i = 0; i < this.attributes.length; ++i) {
+        attr = this.attributes[i];
+        this.keys[elem.routing_key][attr] = elem[attr];
+    }
+};
+Binding.prototype.render = function(model, ctx) {
+    var source = model.exchange[this.source];
     var destination;
-    if (elem.destination_type == "exchange") {
-        destination = model.exchanges[elem.destination];
+    if (this.destination_type == "exchange") {
+        destination = model.exchange[this.destination];
     } else {
-        destination = model.queues[elem.destination];
+        destination = model.queue[this.destination];
     }
     if (undefined == source || undefined == destination) {
         return;
@@ -344,30 +384,30 @@ binding.render = function(model, elem, ctx) {
         return;
     }
     var xMid = (source.xMax + destination.xMin) / 2;
-    var xCtl1 = xMid > (source.xMax + binding.offset) ? xMid : source.xMax
-            + binding.offset;
-    var xCtl2 = xMid < (destination.xMin - binding.offset) ? xMid
-            : destination.xMin - binding.offset;
+    var xCtl1 = xMid > (source.xMax + this.offset) ? xMid : source.xMax
+            + this.offset;
+    var xCtl2 = xMid < (destination.xMin - this.offset) ? xMid
+            : destination.xMin - this.offset;
     var yCtl1 = destination == source ? source.pos[octtree.y]
-            - binding.loopOffset : source.pos[octtree.y];
+            - this.loopOffset : source.pos[octtree.y];
     var yCtl2 = destination == source ? destination.pos[octtree.y]
-            - binding.loopOffset : destination.pos[octtree.y];
+            - this.loopOffset : destination.pos[octtree.y];
     ctx.beginPath();
     ctx.lineWidth = 2.0;
     ctx.strokeStyle = "black";
     ctx.moveTo(source.xMax, source.pos[octtree.y]);
     ctx.bezierCurveTo(xCtl1, yCtl1, xCtl2, yCtl2, destination.xMin,
             destination.pos[octtree.y]);
-    binding.preStroke(source, destination, ctx);
+    this.preStroke(source, destination, ctx);
     ctx.stroke();
 
     // draw an arrow head
     ctx.beginPath();
     ctx.moveTo(destination.xMin, destination.pos[octtree.y]);
-    ctx.lineTo(destination.xMin - binding.fontSize, destination.pos[octtree.y]
-            + (binding.fontSize / 2));
-    ctx.lineTo(destination.xMin - binding.fontSize, destination.pos[octtree.y]
-            - (binding.fontSize / 2));
+    ctx.lineTo(destination.xMin - this.fontSize, destination.pos[octtree.y]
+            + (this.fontSize / 2));
+    ctx.lineTo(destination.xMin - this.fontSize, destination.pos[octtree.y]
+            - (this.fontSize / 2));
     ctx.closePath();
     ctx.fillStyle = ctx.strokeStyle;
     ctx.fill();
@@ -375,17 +415,22 @@ binding.render = function(model, elem, ctx) {
     // draw the binding key
     ctx.beginPath();
     var yMid = source == destination ? source.pos[octtree.y]
-            - binding.loopOffset + 12
+            - this.loopOffset + 12
             : (source.pos[octtree.y] + destination.pos[octtree.y]) / 2;
-    var dim = ctx.measureText(elem.routing_key);
+    var bindingKey = "";
+    for (var k in this.keys) {
+        bindingKey += ", " + k;
+    }
+    bindingKey = bindingKey.slice(2);
+    var dim = ctx.measureText(bindingKey);
 
     ctx.textBaseline = "middle";
     ctx.textAlign = "center";
     ctx.fillStyle = "rgba(255, 255, 255, 0.67);";
-    ctx.fillRect(xMid - dim.width/2, yMid - binding.fontSize/2,
-                   dim.width, binding.fontSize);
+    ctx.fillRect(xMid - dim.width/2, yMid - this.fontSize/2,
+                   dim.width, this.fontSize);
     ctx.fillStyle = ctx.strokeStyle;
-    ctx.fillText(elem.routing_key, xMid, yMid);
+    ctx.fillText(bindingKey, xMid, yMid);
 };
-binding.preStroke = function(source, destination, ctx) {
+Binding.prototype.preStroke = function(source, destination, ctx) {
 };
