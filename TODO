@@ -1,3 +1,4 @@
+deal with multiple bindings to same end points
 optionally render connections
 optionally render channels
 save out text dimensions to avoid recalculating them unnecessarily
