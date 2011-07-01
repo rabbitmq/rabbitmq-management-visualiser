@@ -5,6 +5,8 @@
 <title>RabbitMQ Topology Visualiser</title>
 <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
 
+<link href="../css/main.css" rel="stylesheet" type="text/css"/>
+
 <script type="text/javascript" src="glMatrix-min.js"></script>
 <script type="text/javascript" src="octtree.js"></script>
 <script type="text/javascript" src="physics.js"></script>
@@ -143,7 +145,6 @@ function mouseMove(e) {
     y = (y - canvasTop) + scrollTop;
     mousePos[octtree.x] = x;
     mousePos[octtree.y] = y;
-    document.getElementById("coords").innerHTML = "" + x + ", " + y;
 };
 
 function resizeCanvas() {
@@ -419,6 +420,7 @@ margin: 15px;
 
 .hidden{
 width: 100%;
+clear: both;
 }
 
 .show_button{
@@ -439,29 +441,22 @@ max-height: 100%;
 <body onload="visualisationStart();" onresize="resizeCanvas();" onfocus="enableRendering();" onblur="disableRendering();">
     <div id="side">
         <div class="inner">
-            <p id="coords">coords</p>
-            <hr style="clear:both;"/>
+            <div><a href="../"><div id="logo"></div></a></div>
 
-            <div>Exchanges
+            <div class="hidden">Exchanges
             <select id="hidden_exchanges" multiple="true" size="8" class="hidden"></select>
             <button class="show_button" onclick="showExchanges();">Show</button>
             </div>
-
-            <hr style="clear:both;"/>
 
             <div class="hidden">Queues
             <select id="hidden_queues" multiple="true" size="8" class="hidden"></select>
             <button class="show_button" onclick="showQueues();">Show</button>
             </div>
 
-            <hr style="clear:both;"/>
-
             <div class="hidden">Channels
             <select id="hidden_channels" multiple="true" size="8" class="hidden"></select>
             <button class="show_button" onclick="showChannels();">Show</button>
             </div>
-
-            <hr style="clear:both;"/>
 
             <div class="hidden">Connections
             <select id="hidden_connections" multiple="true" size="8" class="hidden"></select>
