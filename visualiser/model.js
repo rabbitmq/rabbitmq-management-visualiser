@@ -148,12 +148,7 @@ function Exchange(tree, elem, model) {
     this.pos[octtree.y] = this.yInit;
     this.pos[octtree.z] = 0;
 
-    for (var i in model.exchange) {
-        this.pos[octtree.y] =
-            Math.max(this.pos[octtree.y],
-                     model.exchange[i].pos[octtree.y] + this.yIncr);
-    }
-
+    maxY(this, model.exchange);
 
     this.next_pos = vec3.create(this.pos);
     this.xMin = this.pos[octtree.x];
@@ -252,13 +247,7 @@ Exchange.prototype.disable = function(model) {
 };
 Exchange.prototype.enable = function(model) {
     model.exchanges_visible++;
-
-    this.pos[octtree.y] = this.yInit;
-    for (var i in model.exchange) {
-        this.pos[octtree.y] =
-            Math.max(this.pos[octtree.y],
-                     model.queue[i].pos[octtree.y] + this.yIncr);
-    }
+    maxY(this, model.exchange);
 };
 
 function Queue(tree, elem, model) {
@@ -266,14 +255,9 @@ function Queue(tree, elem, model) {
     this.pos = vec3.create();
     this.pos[octtree.x] = this.xInit;
     this.pos[octtree.y] = this.yInit;
-
-    for (var i in model.queue) {
-        this.pos[octtree.y] =
-            Math.max(this.pos[octtree.y],
-                     model.queue[i].pos[octtree.y] + this.yIncr);
-    }
-
     this.pos[octtree.z] = 0;
+
+    maxY(this, model.queue);
 
     this.next_pos = vec3.create(this.pos);
     this.xMin = this.pos[octtree.x];
@@ -365,13 +349,7 @@ Queue.prototype.disable = function(model) {
 };
 Queue.prototype.enable = function(model) {
     model.queues_visible++;
-
-    this.pos[octtree.y] = this.yInit;
-    for (var i in model.queue) {
-        this.pos[octtree.y] =
-            Math.max(this.pos[octtree.y],
-                     model.queue[i].pos[octtree.y] + this.yIncr);
-    }
+    maxY(this, model.queue);
 };
 
 function Binding(elems) {
@@ -446,4 +424,15 @@ Binding.prototype.render = function(model, ctx) {
     ctx.fill();
 };
 Binding.prototype.preStroke = function(source, destination, ctx) {
+};
+
+function maxY(elem, subModel) {
+    elem.pos[octtree.y] = elem.yInit;
+    for (var i in subModel) {
+        if (subModel[i] != elem && ! subModel[i].disabled) {
+            elem.pos[octtree.y] =
+                Math.max(elem.pos[octtree.y],
+                         subModel[i].pos[octtree.y] + elem.yIncr);
+        }
+    }
 };
