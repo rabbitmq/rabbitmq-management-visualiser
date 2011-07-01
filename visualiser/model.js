@@ -186,8 +186,6 @@ function Channel(tree, elem, model) {
     maxX(this, model.channel);
 
     this.next_pos = vec3.create(this.pos);
-    this.xMin = this.pos[octtree.x];
-    this.xMax = this.pos[octtree.x];
     this.mass = 0.1;
     this.velocity = vec3.create();
     this.ideal = { pos : vec3.create() };
@@ -198,8 +196,10 @@ function Channel(tree, elem, model) {
 
 Channel.prototype = {
     yInit : 100,
+    yIncr : 50,
     xInit : 100,
     xIncr : 50,
+    xMax : 200,
     yBoundary : 200,
     attributes : ['acks_uncommitted', 'client_flow_blocked', 'confirm', 'connection_details',
                   'consumer_count', 'message_stats', 'messages_unacknowledged',
@@ -217,6 +217,7 @@ Channel.prototype.spring.pull = true;
 Channel.prototype.spring.push = false;
 
 Channel.prototype.canvasResized = function(canvas) {
+    Channel.prototype.xMax = canvas.width - Channel.prototype.xInit;
 };
 Channel.prototype.update = function(elem) {
     var attr;
@@ -270,6 +271,12 @@ Channel.prototype.disable = function(model) {
 Channel.prototype.enable = function(model) {
     model.channels_visible++;
     maxX(this, model.channel);
+    this.pos[octtree.y] = this.yInit;
+    if (this.pos[octtree.x] >= this.xMax) {
+        this.pos[octtree.x] = this.xMax;
+        maxY(this, model.channel);
+        this.pos[octtree.y] += this.xIncr;
+    }
 };
 
 function Exchange(tree, elem, model) {
@@ -378,6 +385,7 @@ Exchange.prototype.disable = function(model) {
 };
 Exchange.prototype.enable = function(model) {
     model.exchanges_visible++;
+    this.pos[octtree.x] = this.xInit;
     maxY(this, model.exchange);
 };
 
@@ -481,6 +489,7 @@ Queue.prototype.disable = function(model) {
 };
 Queue.prototype.enable = function(model) {
     model.queues_visible++;
+    this.pos[octtree.x] = this.xInit;
     maxY(this, model.queue);
 };
 
