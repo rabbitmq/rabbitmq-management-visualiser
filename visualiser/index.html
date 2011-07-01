@@ -336,28 +336,33 @@ function disable_fun(elemId, postFun) {
         var optionElem = document.createElement('option');
         optionElem.text = '"' + this.name + '"';
         optionElem.value = this.name;
+        document.getElementById(elemId).add(optionElem, null);
+        this.remove = remove_disabled_fun(model, elemId, this.remove);
+        this.postFun = postFun;
+        this.postFun(model);
+    };
+};
+
+function remove_disabled_fun(model, elemId, postFun) {
+    return function (tree) {
         var elem = document.getElementById(elemId);
-        elem.add(optionElem, null);
-        var oldRemove = this.remove;
-        this.remove = function (tree) {
-            for (var i = 0; i < elem.options.length; ++i) {
-                if (elem.options[i].value == this.name) {
-                    elem.remove(i);
-                    break;
-                }
+        for (var i = 0; i < elem.options.length; ++i) {
+            if (elem.options[i].value == this.name) {
+                elem.remove(i);
+                break;
             }
-            model.enable(this, tree);
-            this.remove = oldRemove;
-            this.remove(tree);
-        };
-        postFun(model);
+        }
+        model.enable(this, tree);
+        this.postFun = postFun;
+        this.postFun(tree);
     };
 };
 
 function enable_fun(postFun) {
     return function(model) {
         this.remove = this.__proto__.remove;
-        postFun(model);
+        this.postFun = postFun;
+        this.postFun(model);
     };
 };
 
@@ -376,8 +381,8 @@ function remove_fun(postFun) {
             hoveringOver = undefined;
             dragging = undefined;
         }
-        this.remove = postFun;
-        this.remove(tree);
+        this.postFun = postFun;
+        this.postFun(tree);
     };
 };
 

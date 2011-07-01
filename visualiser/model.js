@@ -16,7 +16,7 @@ Model.prototype.rebuild = function(tree, configuration) {
     for (var i = 0; i < configuration.exchanges.length; ++i) {
         elem = configuration.exchanges[i];
         if (undefined == this.exchange[elem.name]) {
-            this.exchange[elem.name] = new Exchange(tree, elem);
+            this.exchange[elem.name] = new Exchange(tree, elem, this);
             this.exchanges_visible++;
             if (elem.name.slice(0,4) == "amq." ||
                 (this.exchanges_visible >
@@ -43,7 +43,7 @@ Model.prototype.rebuild = function(tree, configuration) {
     for (var i = 0; i < configuration.queues.length; ++i) {
         elem = configuration.queues[i];
         if (undefined == this.queue[elem.name]) {
-            this.queue[elem.name] = new Queue(tree, elem);
+            this.queue[elem.name] = new Queue(tree, elem, this);
             this.queues_visible++;
             if ((this.queues_visible >
                  this.permitted_queues_visible)) {
@@ -141,13 +141,20 @@ Model.prototype.render = function(ctx) {
     }
 };
 
-function Exchange(tree, elem) {
+function Exchange(tree, elem, model) {
     this.name = elem.name;
     this.pos = vec3.create();
     this.pos[octtree.x] = this.xInit;
-    this.pos[octtree.y] = this.yMax;
+    this.pos[octtree.y] = this.yInit;
     this.pos[octtree.z] = 0;
-    Exchange.prototype.yMax += this.yIncr;
+
+    for (var i in model.exchange) {
+        this.pos[octtree.y] =
+            Math.max(this.pos[octtree.y],
+                     model.exchange[i].pos[octtree.y] + this.yIncr);
+    }
+
+
     this.next_pos = vec3.create(this.pos);
     this.xMin = this.pos[octtree.x];
     this.xMax = this.pos[octtree.x];
@@ -162,8 +169,7 @@ function Exchange(tree, elem) {
 };
 
 Exchange.prototype = {
-    yTop : 100,
-    yMax : 100,
+    yInit : 100,
     yIncr : 50,
     xInit : 100,
     xBoundary : 200,
@@ -193,12 +199,6 @@ Exchange.prototype.update = function(elem) {
 };
 Exchange.prototype.remove = function(tree) {
     tree.del(this);
-    Exchange.prototype.yMax = this.yTop;
-    for (var i in model.exchange) {
-        Exchange.prototype.yMax =
-            Math.max(Exchange.prototype.yMax,
-                     model.exchange[i].pos[octtree.y] + this.yIncr);
-    }
 };
 Exchange.prototype.render = function(model, ctx) {
     if (this.disabled) {
@@ -231,9 +231,6 @@ Exchange.prototype.render = function(model, ctx) {
     this.xMin = this.pos[octtree.x] - (dim.width / 2) - this.fontSize;
     this.xMax = this.pos[octtree.x] + (dim.width / 2) + this.fontSize;
 
-    Exchange.prototype.yMax = Math.max(Exchange.prototype.yMax,
-                                       this.pos[octtree.y] + this.yIncr);
-
     for (var i in this.bindings_outbound.exchange) {
         this.bindings_outbound.exchange[i].render(model, ctx);
     }
@@ -255,15 +252,28 @@ Exchange.prototype.disable = function(model) {
 };
 Exchange.prototype.enable = function(model) {
     model.exchanges_visible++;
+
+    this.pos[octtree.y] = this.yInit;
+    for (var i in model.exchange) {
+        this.pos[octtree.y] =
+            Math.max(this.pos[octtree.y],
+                     model.queue[i].pos[octtree.y] + this.yIncr);
+    }
 };
 
-function Queue(tree, elem) {
+function Queue(tree, elem, model) {
     this.name = elem.name;
     this.pos = vec3.create();
     this.pos[octtree.x] = this.xInit;
-    this.pos[octtree.y] = this.yMax;
+    this.pos[octtree.y] = this.yInit;
+
+    for (var i in model.queue) {
+        this.pos[octtree.y] =
+            Math.max(this.pos[octtree.y],
+                     model.queue[i].pos[octtree.y] + this.yIncr);
+    }
+
     this.pos[octtree.z] = 0;
-    Queue.prototype.yMax += this.yIncr;
 
     this.next_pos = vec3.create(this.pos);
     this.xMin = this.pos[octtree.x];
@@ -278,8 +288,7 @@ function Queue(tree, elem) {
 }
 
 Queue.prototype = {
-    yMax : 100,
-    yTop : 100,
+    yInit : 100,
     yIncr : 50,
     xInit : 400,
     xBoundary : 300,
@@ -309,12 +318,6 @@ Queue.prototype.update = function(elem) {
 };
 Queue.prototype.remove = function(tree) {
     tree.del(this);
-    Queue.prototype.yMax = this.yTop;
-    for (var i in model.queue) {
-        Queue.prototype.yMax =
-            Math.max(Queue.prototype.yMax,
-                     model.queue[i].pos[octtree.y] + this.yIncr);
-    }
 };
 Queue.prototype.render = function(model, ctx) {
     if (this.disabled) {
@@ -347,9 +350,6 @@ Queue.prototype.render = function(model, ctx) {
 
     this.xMin = this.pos[octtree.x] - (dim.width / 2) - this.fontSize;
     this.xMax = this.pos[octtree.x] + (dim.width / 2) + this.fontSize;
-
-    Queue.prototype.yMax = Math.max(Queue.prototype.yMax,
-                                    this.pos[octtree.y] + this.yIncr);
 };
 Queue.prototype.preStroke = function(ctx) {
 };
@@ -365,6 +365,13 @@ Queue.prototype.disable = function(model) {
 };
 Queue.prototype.enable = function(model) {
     model.queues_visible++;
+
+    this.pos[octtree.y] = this.yInit;
+    for (var i in model.queue) {
+        this.pos[octtree.y] =
+            Math.max(this.pos[octtree.y],
+                     model.queue[i].pos[octtree.y] + this.yIncr);
+    }
 };
 
 function Binding(elems) {

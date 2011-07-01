@@ -2,7 +2,6 @@ optionally render connections
 optionally render channels
 save out text dimensions to avoid recalculating them unnecessarily
 frustrum culling
-disabled items should reduce yMax
 toggle switches for turning on/off all of connections/channels/exchanges/queues
 info boxes on hover
 layers of some sort (ugh)
