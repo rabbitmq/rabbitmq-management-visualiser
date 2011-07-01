@@ -338,6 +338,7 @@ function disable_fun(elemId, postFun) {
         optionElem.value = this.name;
         var elem = document.getElementById(elemId);
         elem.add(optionElem, null);
+        var oldRemove = this.remove;
         this.remove = function (tree) {
             for (var i = 0; i < elem.options.length; ++i) {
                 if (elem.options[i].value == this.name) {
@@ -345,7 +346,9 @@ function disable_fun(elemId, postFun) {
                     break;
                 }
             }
-            this.__proto__.remove(tree);
+            model.enable(this, tree);
+            this.remove = oldRemove;
+            this.remove(tree);
         };
         postFun(model);
     };
@@ -365,6 +368,21 @@ Queue.prototype.disable =
 
 Exchange.prototype.enable = enable_fun(Exchange.prototype.enable);
 Queue.prototype.enable = enable_fun(Queue.prototype.enable);
+
+
+function remove_fun(postFun) {
+    return function (tree) {
+        if (undefined != hoveringOver && this == hoveringOver) {
+            hoveringOver = undefined;
+            dragging = undefined;
+        }
+        this.remove = postFun;
+        this.remove(tree);
+    };
+};
+
+Queue.prototype.remove = remove_fun(Queue.prototype.remove);
+Exchange.prototype.remove = remove_fun(Exchange.prototype.remove);
 
 </script>
 <style type="text/css">
