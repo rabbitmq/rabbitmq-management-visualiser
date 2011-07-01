@@ -279,7 +279,7 @@ function Exchange(tree, elem, model) {
 };
 
 Exchange.prototype = {
-    yInit : 100,
+    yInit : 200,
     yIncr : 50,
     xInit : 100,
     xBoundary : 200,
@@ -387,7 +387,7 @@ function Queue(tree, elem, model) {
 }
 
 Queue.prototype = {
-    yInit : 100,
+    yInit : 200,
     yIncr : 50,
     xInit : 400,
     xBoundary : 300,
