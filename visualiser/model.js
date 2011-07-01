@@ -6,6 +6,10 @@ function Model() {
     this.channel = {};
     this.channels_visible = 0;
     this.connection = {};
+    this.rendering = { exchange : true,
+                       queue : true,
+                       channel : true,
+                       connection : true };
 };
 
 Model.prototype.permitted_exchanges_visible = 10;
@@ -165,14 +169,20 @@ Model.prototype.enable = function(elem, tree) {
     elem.disabled = false;
 };
 Model.prototype.render = function(ctx) {
-    for (var i in this.channel) {
-        model.channel[i].render(this, ctx);
+    if (model.rendering.channel) {
+        for (var i in this.channel) {
+            model.channel[i].render(this, ctx);
+        }
     }
-    for (var i in this.exchange) {
-        model.exchange[i].render(this, ctx);
+    if (model.rendering.exchange) {
+        for (var i in this.exchange) {
+            model.exchange[i].render(this, ctx);
+        }
     }
-    for (var i in this.queue) {
-        model.queue[i].render(this, ctx);
+    if (model.rendering.queue) {
+        for (var i in this.queue) {
+            model.queue[i].render(this, ctx);
+        }
     }
 };
 
@@ -367,8 +377,10 @@ Exchange.prototype.render = function(model, ctx) {
     for (var i in this.bindings_outbound.exchange) {
         this.bindings_outbound.exchange[i].render(model, ctx);
     }
-    for (var i in this.bindings_outbound.queue) {
-        this.bindings_outbound.queue[i].render(model, ctx);
+    if (model.rendering.queue) {
+        for (var i in this.bindings_outbound.queue) {
+            this.bindings_outbound.queue[i].render(model, ctx);
+        }
     }
 };
 Exchange.prototype.preStroke = function(ctx) {
