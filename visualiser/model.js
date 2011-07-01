@@ -33,8 +33,8 @@ Model.prototype.rebuild = function(tree, configuration) {
     }
     for (var i in this.channel) {
         if (undefined == matched[i]) {
-            elem = this.exchange[i];
-            delete this.exchange[i];
+            elem = this.channel[i];
+            delete this.channel[i];
             elem.remove(tree);
             if (! elem.disabled) {
                 this.channels_visible--;
@@ -197,11 +197,14 @@ function Channel(tree, elem, model) {
 };
 
 Channel.prototype = {
-    yInit : 50,
+    yInit : 100,
     xInit : 100,
     xIncr : 50,
     yBoundary : 200,
-    attributes : [],
+    attributes : ['acks_uncommitted', 'client_flow_blocked', 'confirm', 'connection_details',
+                  'consumer_count', 'message_stats', 'messages_unacknowledged',
+                  'messages_unconfirmed', 'node', 'number', 'prefetch_count', 'transactional',
+                  'user'],
     pos : vec3.create(),
     fontSize : 12,
     spring : new Spring()
@@ -230,14 +233,27 @@ Channel.prototype.render = function(model, ctx) {
         return;
     }
     ctx.beginPath();
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    var dim = ctx.measureText(this.name);
+
     ctx.lineWidth = 2.0;
     ctx.strokeStyle = "black";
-    ctx.moveTo(this.pos[octtree.x], this.pos[octtree.y]);
-    ctx.lineTo(this.pos[octtree.x] + 10, this.pos[octtree.y]);
-    ctx.lineTo(this.pos[octtree.x] + 10, this.pos[octtree.y] + 10);
-    ctx.lineTo(this.pos[octtree.x], this.pos[octtree.y] + 10);
+    ctx.moveTo(this.pos[octtree.x] - this.fontSize, this.pos[octtree.y] - (dim.width/2) - this.fontSize);
+    ctx.lineTo(this.pos[octtree.x] + this.fontSize, this.pos[octtree.y] - (dim.width/2) - this.fontSize);
+    ctx.lineTo(this.pos[octtree.x] + this.fontSize, this.pos[octtree.y] + (dim.width/2) + this.fontSize);
+    ctx.lineTo(this.pos[octtree.x] - this.fontSize, this.pos[octtree.y] + (dim.width/2) + this.fontSize);
     ctx.closePath();
     this.preStroke(ctx);
+
+    ctx.save();
+    ctx.translate(this.pos[octtree.x], this.pos[octtree.y]);
+    ctx.rotate(3*Math.PI/2);
+    ctx.beginPath();
+    ctx.fillStyle = ctx.strokeStyle;
+    ctx.fillText(this.name, 0, 0);
+    ctx.restore();
 };
 Channel.prototype.preStroke = function(ctx) {
 };
@@ -279,7 +295,7 @@ function Exchange(tree, elem, model) {
 };
 
 Exchange.prototype = {
-    yInit : 200,
+    yInit : 250,
     yIncr : 50,
     xInit : 100,
     xBoundary : 200,
@@ -387,12 +403,13 @@ function Queue(tree, elem, model) {
 }
 
 Queue.prototype = {
-    yInit : 200,
+    yInit : 250,
     yIncr : 50,
     xInit : 400,
     xBoundary : 300,
     attributes : [ 'arguments', 'auto_delete', 'durable', 'messages',
-                   'messages_ready', 'messages_unacknowledged', 'message_stats' ],
+                   'messages_ready', 'messages_unacknowledged', 'message_stats',
+                   'node', 'owner_pid_details' ],
     pos : vec3.create(),
     fontSize : 12,
     spring : new Spring()
