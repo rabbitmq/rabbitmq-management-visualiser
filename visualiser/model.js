@@ -3,16 +3,46 @@ function Model() {
     this.exchanges_visible = 0;
     this.queue = {};
     this.queues_visible = 0;
-    this.connections = {};
-    this.channels = {};
+    this.channel = {};
+    this.channels_visible = 0;
+    this.connection = {};
 };
 
 Model.prototype.permitted_exchanges_visible = 10;
 Model.prototype.permitted_queues_visible = 10;
+Model.prototype.permitted_channels_visible = 10;
 
 Model.prototype.rebuild = function(tree, configuration) {
     var elem;
     var matched = {};
+
+    // Channels
+    for (var i = 0; i < configuration.channels.length; ++i) {
+        elem = configuration.channels[i];
+        if (undefined == this.channel[elem.name]) {
+            this.channel[elem.name] = new Channel(tree, elem, this);
+            this.channels_visible++;
+            if ((this.channels_visible >
+                 this.permitted_channels_visible)) {
+                this.disable(this.channel[elem.name], tree);
+            }
+        } else {
+            this.channel[elem.name].update(elem);
+        }
+        matched[elem.name] = true;
+    }
+    for (var i in this.channel) {
+        if (undefined == matched[i]) {
+            elem = this.exchange[i];
+            delete this.exchange[i];
+            elem.remove(tree);
+            if (! elem.disabled) {
+                this.channels_visible--;
+            }
+        }
+    }
+
+    // Exchanges
     for (var i = 0; i < configuration.exchanges.length; ++i) {
         elem = configuration.exchanges[i];
         if (undefined == this.exchange[elem.name]) {
@@ -39,6 +69,7 @@ Model.prototype.rebuild = function(tree, configuration) {
         }
     }
 
+    // Queues
     matched = {};
     for (var i = 0; i < configuration.queues.length; ++i) {
         elem = configuration.queues[i];
@@ -65,6 +96,7 @@ Model.prototype.rebuild = function(tree, configuration) {
         }
     }
 
+    // Bindings
     var binding;
     var bindings = {};
     for (var i = 0; i < configuration.bindings.length; ++i) {
@@ -133,12 +165,95 @@ Model.prototype.enable = function(elem, tree) {
     elem.disabled = false;
 };
 Model.prototype.render = function(ctx) {
+    for (var i in this.channel) {
+        model.channel[i].render(this, ctx);
+    }
     for (var i in this.exchange) {
         model.exchange[i].render(this, ctx);
     }
     for (var i in this.queue) {
         model.queue[i].render(this, ctx);
     }
+};
+
+function Channel(tree, elem, model) {
+    this.name = elem.name;
+    this.pos = vec3.create();
+    this.pos[octtree.x] = this.xInit;
+    this.pos[octtree.y] = this.yInit;
+    this.pos[octtree.z] = 0;
+
+    maxX(this, model.channel);
+
+    this.next_pos = vec3.create(this.pos);
+    this.xMin = this.pos[octtree.x];
+    this.xMax = this.pos[octtree.x];
+    this.mass = 0.1;
+    this.velocity = vec3.create();
+    this.ideal = { pos : vec3.create() };
+    this.disabled = false;
+    this.update(elem);
+    tree.add(this);
+};
+
+Channel.prototype = {
+    yInit : 50,
+    xInit : 100,
+    xIncr : 50,
+    yBoundary : 200,
+    attributes : [],
+    pos : vec3.create(),
+    fontSize : 12,
+    spring : new Spring()
+};
+Channel.prototype.spring.octtreeLimit = 10;
+Channel.prototype.spring.octtreeRadius = 500;
+Channel.prototype.spring.equilibriumLength = 0;
+Channel.prototype.spring.dampingFactor = 0.1;
+Channel.prototype.spring.pull = true;
+Channel.prototype.spring.push = false;
+
+Channel.prototype.canvasResized = function(canvas) {
+};
+Channel.prototype.update = function(elem) {
+    var attr;
+    for (var i = 0; i < this.attributes.length; ++i) {
+        attr = this.attributes[i];
+        this[attr] = elem[attr];
+    }
+};
+Channel.prototype.remove = function(tree) {
+    tree.del(this);
+};
+Channel.prototype.render = function(model, ctx) {
+    if (this.disabled) {
+        return;
+    }
+    ctx.beginPath();
+    ctx.lineWidth = 2.0;
+    ctx.strokeStyle = "black";
+    ctx.moveTo(this.pos[octtree.x], this.pos[octtree.y]);
+    ctx.lineTo(this.pos[octtree.x] + 10, this.pos[octtree.y]);
+    ctx.lineTo(this.pos[octtree.x] + 10, this.pos[octtree.y] + 10);
+    ctx.lineTo(this.pos[octtree.x], this.pos[octtree.y] + 10);
+    ctx.closePath();
+    this.preStroke(ctx);
+};
+Channel.prototype.preStroke = function(ctx) {
+};
+Channel.prototype.animate = function(elapsed) {
+    if (this.yBoundary > this.pos[octtree.y]) {
+        this.ideal.pos[octtree.x] = this.pos[octtree.x];
+        this.ideal.pos[octtree.y] = this.yInit;
+        this.spring.apply(elapsed, this, this.ideal);
+    }
+};
+Channel.prototype.disable = function(model) {
+    model.channels_visible--;
+};
+Channel.prototype.enable = function(model) {
+    model.channels_visible++;
+    maxX(this, model.channel);
 };
 
 function Exchange(tree, elem, model) {
@@ -433,6 +548,17 @@ function maxY(elem, subModel) {
             elem.pos[octtree.y] =
                 Math.max(elem.pos[octtree.y],
                          subModel[i].pos[octtree.y] + elem.yIncr);
+        }
+    }
+};
+
+function maxX(elem, subModel) {
+    elem.pos[octtree.x] = elem.xInit;
+    for (var i in subModel) {
+        if (subModel[i] != elem && ! subModel[i].disabled) {
+            elem.pos[octtree.x] =
+                Math.max(elem.pos[octtree.x],
+                         subModel[i].pos[octtree.x] + elem.xIncr);
         }
     }
 };

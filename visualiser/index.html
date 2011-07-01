@@ -75,6 +75,7 @@ function draggable(ctx) {
     }
     ctx.stroke();
 };
+Channel.prototype.preStroke = draggable;
 Exchange.prototype.preStroke = draggable;
 Queue.prototype.preStroke = draggable;
 Binding.prototype.preStroke = function(source, destination, ctx) {
@@ -151,6 +152,7 @@ function resizeCanvas() {
     if (undefined != canvas) {
         canvas.width = canvas.parentNode.offsetWidth;
         canvas.height = canvas.parentNode.offsetHeight;
+        Channel.prototype.canvasResized(canvas);
         Exchange.prototype.canvasResized(canvas);
         Queue.prototype.canvasResized(canvas);
     }
@@ -285,6 +287,15 @@ function animate() {
                 clamp(e);
             }
         }
+        for (var i in model.channel) {
+            e = model.channel[i];
+            if ((undefined == dragging || dragging != e) && ! e.disabled) {
+                e.animate(elapsed);
+                newton.update(elapsed, e);
+                spring.update(elapsed, tree, e);
+                clamp(e);
+            }
+        }
         for (var i in model.queue) {
             e = model.queue[i];
             if ((undefined == dragging || dragging != e) && ! e.disabled) {
@@ -322,6 +333,10 @@ function show(elemId, modelElem) {
             --i;
         }
     }
+};
+
+function showChannels() {
+    show("hidden_exchanges", model.exchange);
 };
 
 function showExchanges() {
@@ -367,11 +382,14 @@ function enable_fun(postFun) {
     };
 };
 
+Channel.prototype.disable =
+    disable_fun("hidden_channels", Channel.prototype.disable);
 Exchange.prototype.disable =
     disable_fun("hidden_exchanges", Exchange.prototype.disable);
 Queue.prototype.disable =
     disable_fun("hidden_queues", Queue.prototype.disable);
 
+Channel.prototype.enable = enable_fun(Channel.prototype.enable);
 Exchange.prototype.enable = enable_fun(Exchange.prototype.enable);
 Queue.prototype.enable = enable_fun(Queue.prototype.enable);
 
@@ -387,6 +405,7 @@ function remove_fun(postFun) {
     };
 };
 
+Channel.prototype.remove = remove_fun(Channel.prototype.remove);
 Queue.prototype.remove = remove_fun(Queue.prototype.remove);
 Exchange.prototype.remove = remove_fun(Exchange.prototype.remove);
 
@@ -458,10 +477,10 @@ max-height: 100%;
             <button class="show_button" onclick="showChannels();">Show</button>
             </div>
 
-            <div class="hidden">Connections
+            <!-- <div class="hidden">Connections
             <select id="hidden_connections" multiple="true" size="8" class="hidden"></select>
             <button class="show_button" onclick="showConnections();">Show</button>
-            </div>
+            </div> -->
         </div>
     </div>
     <div id="main" onscroll="canvasScroll();">
