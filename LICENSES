@@ -4,8 +4,5 @@ glMatrix-min.js is taken from the glMatrix project at
 http://code.google.com/p/glmatrix/ and is licensed under the new BSD
 license - http://www.opensource.org/licenses/bsd-license.php
 
-webgl-utils.js is published by Google Inc., and is licensed under the
-new BSD license - http://www.opensource.org/licenses/bsd-license.php
-
 All other code in this project (Javascript files (.js), and HTML files
 (.html)) is Copyright VMware Inc, 2011, and is licensed under the MPL.
