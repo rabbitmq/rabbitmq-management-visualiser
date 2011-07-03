@@ -356,7 +356,15 @@ function disable_fun(elemId, postFun) {
         var optionElem = document.createElement('option');
         optionElem.text = '"' + this.name + '"';
         optionElem.value = this.name;
-        document.getElementById(elemId).add(optionElem, null);
+        var elem = document.getElementById(elemId);
+        var preceding = null;
+        for (var i = 0; i < elem.options.length; ++i) {
+            if (optionElem.text < elem.options[i].text) {
+                preceding = elem.options[i];
+                break;
+            }
+        }
+        elem.add(optionElem, preceding);
         this.remove = remove_disabled_fun(model, elemId, this.remove);
         this.postFun = postFun;
         this.postFun(model);
