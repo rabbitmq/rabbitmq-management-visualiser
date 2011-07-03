@@ -185,6 +185,9 @@ Model.prototype.render = function(ctx) {
         }
     }
 };
+Model.prototype.cull = function (xMin, yMin, width, height) {
+    return false;
+};
 
 function Channel(tree, elem, model) {
     this.name = elem.name;
@@ -243,11 +246,17 @@ Channel.prototype.render = function(model, ctx) {
     if (this.disabled) {
         return;
     }
+    var dim = ctx.measureText(this.name);
+    if (model.cull(this.pos[octtree.x] - this.fontSize,
+                   this.pos[octtree.y] - (dim.width/2) - this.fontSize,
+                   this.fontSize * 2,
+                   dim.width + (this.fontSize * 2))) {
+        return;
+    }
+
     ctx.beginPath();
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-
-    var dim = ctx.measureText(this.name);
 
     ctx.lineWidth = 2.0;
     ctx.strokeStyle = "black";
@@ -347,11 +356,25 @@ Exchange.prototype.render = function(model, ctx) {
     if (this.disabled) {
         return;
     }
+    for (var i in this.bindings_outbound.exchange) {
+        this.bindings_outbound.exchange[i].render(model, ctx);
+    }
+    if (model.rendering.queue) {
+        for (var i in this.bindings_outbound.queue) {
+            this.bindings_outbound.queue[i].render(model, ctx);
+        }
+    }
+    var dim = ctx.measureText(this.name);
+    if (model.cull(this.pos[octtree.x] - (dim.width / 2) - this.fontSize,
+                   this.pos[octtree.y] - this.fontSize,
+                   dim.width + (2*this.fontSize),
+                   2*this.fontSize)) {
+        return;
+    }
+
     ctx.beginPath();
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-
-    var dim = ctx.measureText(this.name);
 
     ctx.lineWidth = 2.0;
     ctx.strokeStyle = "black";
@@ -373,15 +396,6 @@ Exchange.prototype.render = function(model, ctx) {
 
     this.xMin = this.pos[octtree.x] - (dim.width / 2) - this.fontSize;
     this.xMax = this.pos[octtree.x] + (dim.width / 2) + this.fontSize;
-
-    for (var i in this.bindings_outbound.exchange) {
-        this.bindings_outbound.exchange[i].render(model, ctx);
-    }
-    if (model.rendering.queue) {
-        for (var i in this.bindings_outbound.queue) {
-            this.bindings_outbound.queue[i].render(model, ctx);
-        }
-    }
 };
 Exchange.prototype.preStroke = function(ctx) {
 };
@@ -459,12 +473,18 @@ Queue.prototype.render = function(model, ctx) {
     if (this.disabled) {
         return;
     }
-    ctx.beginPath();
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
     var text = this.name + " (" + this.messages_ready + ", "
             + this.messages_unacknowledged + ")";
     var dim = ctx.measureText(text);
+    if (model.cull(this.pos[octtree.x] - (dim.width / 2) - this.fontSize,
+                   this.pos[octtree.y] - this.fontSize,
+                   dim.width + (2*this.fontSize),
+                   2*this.fontSize)) {
+        return;
+    }
+    ctx.beginPath();
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
 
     ctx.lineWidth = 2.0;
     ctx.strokeStyle = "black";
@@ -554,6 +574,14 @@ Binding.prototype.render = function(model, ctx) {
             - this.loopOffset : source.pos[octtree.y];
     var yCtl2 = destination == source ? destination.pos[octtree.y]
             - this.loopOffset : destination.pos[octtree.y];
+    var xMin = Math.min(source.xMax, xCtl2);
+    var yMin = Math.min(yCtl1, yCtl2);
+    var xMax = Math.max(destination.xMin, xCtl1);
+    var yMax = Math.max(source.pos[octtree.y], destination.pos[octtree.y]);
+    if (model.cull(xMin, yMin, xMax - xMin, yMax - yMin)) {
+        return;
+    }
+
     ctx.beginPath();
     ctx.lineWidth = 1.0;
     ctx.strokeStyle = "black";

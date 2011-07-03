@@ -1,5 +1,4 @@
 optionally render connections
 save out text dimensions to avoid recalculating them unnecessarily
-frustrum culling
 info boxes on hover
 layers of some sort (ugh)

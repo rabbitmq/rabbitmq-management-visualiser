@@ -371,6 +371,14 @@ function disable_fun(elemId, postFun) {
     };
 };
 
+function frustumCull(xMin, yMin, width, height) {
+    return ((yMin > (scrollTop + canvas.parentNode.clientHeight)) ||
+            ((yMin + height) < scrollTop) ||
+            (xMin > (scrollLeft + canvas.parentNode.clientWidth)) ||
+            ((xMin + width) < scrollLeft));
+};
+Model.prototype.cull = frustumCull;
+
 function remove_disabled_fun(model, elemId, postFun) {
     return function (tree) {
         var elem = document.getElementById(elemId);
