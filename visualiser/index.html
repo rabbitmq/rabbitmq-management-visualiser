@@ -140,6 +140,8 @@ var canvasLeft = 0;
 var canvasTop = 0;
 var scrollLeft = 0;
 var scrollTop = 0;
+var clientWidth = 0;
+var clientHeight = 0;
 
 function mouseMove(e) {
     var x = e.pageX;
@@ -157,6 +159,17 @@ function resizeCanvas() {
         Channel.prototype.canvasResized(canvas);
         Exchange.prototype.canvasResized(canvas);
         Queue.prototype.canvasResized(canvas);
+        clientWidth = canvas.width;
+        clientHeight = canvas.height;
+        var e = canvas.parentNode;
+        while (undefined != e) {
+            if (undefined != e.clientHeight && undefined != e.clientWidth &&
+                e.clientHeight > 0 && e.clientWidth > 0) {
+                clientHeight = Math.min(clientHeight, e.clientHeight);
+                clientWidth = Math.min(clientWidth, e.clientWidth);
+            }
+            e = e.parentNode;
+        }
     }
 };
 
@@ -215,12 +228,11 @@ function initCanvas(canvas) {
 
 function drawScene() {
     ctx.font = "" + fontSize + "px sans-serif";
-    ctx.clearRect(0, 0, canvas.width -1, canvas.height -1);
+    ctx.clearRect(scrollLeft, scrollTop, clientWidth, clientHeight);
     ctx.lineWidth = 1.0;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     ctx.strokeStyle = "black";
-    ctx.strokeRect(0, 0, canvas.width -1, canvas.height -1);
     model.render(ctx);
 };
 
@@ -372,9 +384,9 @@ function disable_fun(elemId, postFun) {
 };
 
 function frustumCull(xMin, yMin, width, height) {
-    return ((yMin > (scrollTop + canvas.parentNode.clientHeight)) ||
+    return ((yMin > (scrollTop + clientHeight)) ||
             ((yMin + height) < scrollTop) ||
-            (xMin > (scrollLeft + canvas.parentNode.clientWidth)) ||
+            (xMin > (scrollLeft + clientWidth)) ||
             ((xMin + width) < scrollLeft));
 };
 Model.prototype.cull = frustumCull;
