@@ -6,6 +6,7 @@ function Model() {
     this.channel = {};
     this.channels_visible = 0;
     this.connection = {};
+    this.vhost = {};
     this.rendering = { exchange : true,
                        queue : true,
                        channel : true,
@@ -156,6 +157,24 @@ Model.prototype.rebuild = function(tree, configuration) {
         }
     }
     bindings = undefined;
+
+    // vhosts
+    matched = {};
+    for (var i = 0; i < configuration.vhosts.length; ++i) {
+        elem = configuration.vhosts[i];
+        if (undefined == this.vhost[elem.name]) {
+            this.vhost[elem.name] = elem;
+            this.vhost_add(elem);
+        }
+        matched[elem.name] = true;
+    }
+    for (var i in this.vhost) {
+        if (undefined == matched[i]) {
+            this.vhost_remove(this.vhost[i]);
+            delete this.vhost[i];
+        }
+    }
+
     matched = undefined;
 };
 Model.prototype.disable = function(elem, tree) {
@@ -187,6 +206,10 @@ Model.prototype.render = function(ctx) {
 };
 Model.prototype.cull = function (xMin, yMin, width, height) {
     return false;
+};
+Model.prototype.vhost_add = function (elem) {
+};
+Model.prototype.vhost_del = function (elem) {
 };
 
 function Channel(tree, elem, model) {

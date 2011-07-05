@@ -32,9 +32,14 @@ var highlight = "#ffffc0";
 var faded = "#b0b0b0";
 var hoveringOver = undefined;
 var dragging = undefined;
+var selectedVhost = undefined;
 
 function update() {
-    client.open("GET", "/api/all");
+    if (undefined == selectedVhost) {
+        client.open("GET", "/api/all");
+    } else {
+        client.open("GET", "/api/all/" + encodeURIComponent(selectedVhost));
+    }
     client.send();
 };
 
@@ -368,19 +373,23 @@ function disable_fun(elemId, postFun) {
         var optionElem = document.createElement('option');
         optionElem.text = '"' + this.name + '"';
         optionElem.value = this.name;
-        var elem = document.getElementById(elemId);
-        var preceding = null;
-        for (var i = 0; i < elem.options.length; ++i) {
-            if (optionElem.text < elem.options[i].text) {
-                preceding = elem.options[i];
-                break;
-            }
-        }
-        elem.add(optionElem, preceding);
+        selectInsertAlphabetical(document.getElementById(elemId), optionElem);
         this.remove = remove_disabled_fun(model, elemId, this.remove);
         this.postFun = postFun;
         this.postFun(model);
     };
+};
+
+function selectInsertAlphabetical(selectElem, optionElem) {
+    var preceding = null;
+    for (var i = 0; i < selectElem.options.length; ++i) {
+        if (optionElem.text < selectElem.options[i].text) {
+            preceding = selectElem.options[i];
+            break;
+        }
+    }
+    selectElem.add(optionElem, preceding);
+    return selectElem.options;
 };
 
 function frustumCull(xMin, yMin, width, height) {
@@ -446,6 +455,38 @@ function toggleRendering(elem) {
     return true;
 }
 
+Model.prototype.vhost_add = function (vhost) {
+    var optionElem = document.createElement('option');
+    optionElem.text = vhost.name;
+    optionElem.value = vhost.name;
+    var options =
+        selectInsertAlphabetical(document.getElementById('vhosts'), optionElem);
+    if (options.length == 1) {
+        selectedVhost = options[0].value;
+        options[0].selected = true;
+    }
+};
+
+Model.prototype.vhost_remove = function (vhost) {
+    var elem = document.getElementById('vhosts');
+    for (var i = 0; i < elem.options.length; ++i) {
+        if (elem.options[i].value == vhost.name) {
+            elem.remove(i);
+            break;
+        }
+    }
+};
+
+function vhostChanged() {
+    var elem = document.getElementById('vhosts');
+    for (var i = 0; i < elem.options.length; ++i) {
+        if (elem.options[i].selected) {
+            selectedVhost = elem.options[i].value;
+            break;
+        }
+    }
+};
+
 </script>
 <style type="text/css">
 #side{
@@ -498,6 +539,8 @@ max-height: 100%;
     <div id="side">
         <div class="inner">
             <div><a href="../"><div id="logo"></div></a></div>
+
+            <div>Vhost: <select id="vhosts" class="show_button" size="1" onchange="vhostChanged();"></select></div>
 
             <div class="hidden">Exchanges
                 <div style="float: right;">
