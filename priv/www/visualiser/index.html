@@ -7,10 +7,10 @@
 
 <link href="../css/main.css" rel="stylesheet" type="text/css"/>
 
-<script type="text/javascript" src="glMatrix-min.js"></script>
-<script type="text/javascript" src="octtree.js"></script>
-<script type="text/javascript" src="physics.js"></script>
-<script type="text/javascript" src="model.js"></script>
+<script type="text/javascript" src="js/glMatrix-min.js"></script>
+<script type="text/javascript" src="js/octtree.js"></script>
+<script type="text/javascript" src="js/physics.js"></script>
+<script type="text/javascript" src="js/model.js"></script>
 <script type="text/javascript">
 
 var updatePeriod = 1000; // 1 second
@@ -23,8 +23,6 @@ var configuration = undefined;
 
 var tree = octtree.create(0, 10000, 0, 1000000, -0.5, 2);
 var model = new Model();
-model.rendering.channel = false;
-model.rendering.connection = false;
 var mousePos = vec3.create();
 var mouseDown = false;
 var mouseDragOffsetVec = undefined;
@@ -450,8 +448,26 @@ Channel.prototype.remove = remove_fun(Channel.prototype.remove);
 Queue.prototype.remove = remove_fun(Queue.prototype.remove);
 Exchange.prototype.remove = remove_fun(Exchange.prototype.remove);
 
-function toggleRendering(elem) {
+function toggleRendering(elemId, elem) {
     model.rendering[elem] = !model.rendering[elem];
+    if (model.rendering[elem]) {
+        var hidden = document.getElementById(elemId);
+        for (var i = 0; i < hidden.options.length; ++i) {
+            var e = hidden.options[i].value;
+            if (model[elem][e].disabled == 'rendering') {
+                model.enable(model[elem][e], tree);
+                hidden.remove(i);
+                --i;
+            }
+        }
+    } else {
+        for (var i in model[elem]) {
+            if (! model[elem][i].disabled) {
+                model.disable(model[elem][i], tree);
+                model[elem][i].disabled = 'rendering';
+            }
+        }
+    }
     return true;
 }
 
@@ -480,8 +496,13 @@ Model.prototype.vhost_remove = function (vhost) {
 function vhostChanged() {
     var elem = document.getElementById('vhosts');
     for (var i = 0; i < elem.options.length; ++i) {
-        if (elem.options[i].selected) {
+        if (elem.options[i].selected && selectedVhost != elem.options[i].value) {
             selectedVhost = elem.options[i].value;
+            for (var e in ['channel', 'exchange', 'queue']) {
+                for (var i in model[e]) {
+                    model[e][i].remove(tree);
+                }
+            }
             break;
         }
     }
@@ -544,21 +565,21 @@ max-height: 100%;
 
             <div class="hidden">Exchanges
                 <div style="float: right;">
-                    <input type="checkbox" value="Display" checked onclick="toggleRendering('exchange');"/>Display</div>
+                    <input type="checkbox" value="Display" checked onclick="toggleRendering('hidden_exchanges', 'exchange');"/>Display</div>
             <select id="hidden_exchanges" multiple="true" size="8" class="hidden"></select>
             <button class="show_button" onclick="showExchanges();">Show</button>
             </div>
 
             <div class="hidden">Queues
                 <div style="float: right;">
-                    <input type="checkbox" value="Display" checked onclick="toggleRendering('queue');"/>Display</div>
+                    <input type="checkbox" value="Display" checked onclick="toggleRendering('hidden_queues', 'queue');"/>Display</div>
             <select id="hidden_queues" multiple="true" size="8" class="hidden"></select>
             <button class="show_button" onclick="showQueues();">Show</button>
             </div>
 
             <div class="hidden">Channels
                 <div style="float: right;">
-                    <input type="checkbox" value="Display" onclick="toggleRendering('channel');"/>Display</div>
+                    <input type="checkbox" value="Display" onclick="toggleRendering('hidden_channels', 'channel');"/>Display</div>
             <select id="hidden_channels" multiple="true" size="8" class="hidden"></select>
             <button class="show_button" onclick="showChannels();">Show</button>
             </div>
