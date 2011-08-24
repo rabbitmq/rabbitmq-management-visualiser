@@ -304,7 +304,6 @@ Channel.prototype.render = function(model, ctx) {
     ctx.save();
     ctx.translate(this.pos[octtree.x], this.pos[octtree.y]);
     ctx.rotate(3*Math.PI/2);
-    ctx.beginPath();
     ctx.fillStyle = ctx.strokeStyle;
     ctx.fillText(this.name, 0, 0);
     ctx.restore();
@@ -332,17 +331,15 @@ Channel.prototype.render = function(model, ctx) {
                     ctx.closePath();
                     ctx.stroke();
 
-                    ctx.beginPath();
                     var dim = ctx.measureText(consumer.consumer_tag);
                     var xMid = (this.pos[octtree.x] + xCtl)/2;
                     yMid = (yMid + queue.pos[octtree.y] - this.yInit)/2;
                     ctx.textBaseline = "middle";
                     ctx.textAlign = "center";
-                    ctx.fillStyle = "rgba(255, 255, 255, 0.67);";
+                    ctx.fillStyle = "rgba(255, 255, 255, 0.67)";
                     ctx.fillRect(xMid - dim.width/2, yMid - this.fontSize/2, dim.width, this.fontSize);
                     ctx.fillStyle = ctx.strokeStyle;
                     ctx.fillText(consumer.consumer_tag, xMid, yMid);
-                    ctx.closePath();
                 }
             }
             if (needArrow) {
@@ -508,7 +505,6 @@ Exchange.prototype.render = function(model, ctx) {
 
     this.preStroke(ctx);
 
-    ctx.beginPath();
     ctx.fillStyle = ctx.strokeStyle;
     ctx.fillText(this.name, this.pos[octtree.x], this.pos[octtree.y]);
 
@@ -619,7 +615,6 @@ Queue.prototype.render = function(model, ctx) {
 
     this.preStroke(ctx);
 
-    ctx.beginPath();
     ctx.fillStyle = ctx.strokeStyle;
     ctx.fillText(text, this.pos[octtree.x], this.pos[octtree.y]);
 
@@ -711,6 +706,8 @@ Binding.prototype.render = function(model, ctx) {
     ctx.moveTo(destination.xMin, destination.pos[octtree.y]+1);
     ctx.bezierCurveTo(xCtl2, yCtl2+1, xCtl1, yCtl1+1, source.xMax,
             source.pos[octtree.y]+1);
+    ctx.moveTo(source.xMax, source.pos[octtree.y]);
+    ctx.closePath();
     this.preStroke(source, destination, ctx);
 
     // draw an arrow head

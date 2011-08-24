@@ -129,7 +129,6 @@ Binding.prototype.preStroke = function(source, destination, ctx) {
     ctx.stroke();
 
     if (drawBindingKeys) {
-        ctx.beginPath();
         var xMid = (source.xMax + destination.xMin) / 2;
         var yMid = source == destination ? source.pos[octtree.y]
             - this.loopOffset + 12
@@ -143,7 +142,7 @@ Binding.prototype.preStroke = function(source, destination, ctx) {
 
         ctx.textBaseline = "middle";
         ctx.textAlign = "center";
-        ctx.fillStyle = "rgba(255, 255, 255, 0.67);";
+        ctx.fillStyle = "rgba(255, 255, 255, 0.67)";
         ctx.fillRect(xMid - dim.width/2, yMid - this.fontSize/2, dim.width, this.fontSize);
         ctx.fillStyle = ctx.strokeStyle;
         ctx.fillText(bindingKey, xMid, yMid);
