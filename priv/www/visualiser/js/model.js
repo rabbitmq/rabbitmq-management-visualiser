@@ -190,11 +190,13 @@ Model.prototype.disable = function(elem, tree) {
     elem.disable(this);
     tree.del(elem);
     elem.disabled = true;
+    elem.details = undefined;
 };
 Model.prototype.enable = function(elem, tree) {
     elem.enable(this);
     tree.add(elem);
     elem.disabled = false;
+    elem.details = undefined;
 };
 Model.prototype.render = function(ctx) {
     if (model.rendering.exchange.enabled) {
@@ -249,7 +251,7 @@ Channel.prototype = {
     attributes : ['acks_uncommitted', 'client_flow_blocked', 'confirm', 'connection_details',
                   'consumer_count', 'message_stats', 'messages_unacknowledged',
                   'messages_unconfirmed', 'node', 'number', 'prefetch_count', 'transactional',
-                  'user'],
+                  'user', 'vhost'],
     pos : vec3.create(),
     fontSize : 12,
     spring : new Spring(),
@@ -408,9 +410,6 @@ Channel.prototype.enable = function(model) {
         this.pos[octtree.y] += this.xIncr;
     }
 };
-Channel.prototype.setDetails = function(details, model) {
-    this.details = details;
-};
 
 function Exchange(tree, elem, model) {
     this.name = elem.name;
@@ -440,10 +439,11 @@ Exchange.prototype = {
     xInit : 100,
     xBoundary : 200,
     attributes : [ 'arguments', 'auto_delete', 'durable', 'internal', 'type',
-                   'message_stats_out', 'message_stats_in' ],
+                   'message_stats_out', 'message_stats_in', 'vhost' ],
     pos : vec3.create(),
     fontSize : 12,
     spring : new Spring(),
+    details : undefined,
     type : 'exchange'
 };
 Exchange.prototype.spring.octtreeLimit = 10;
@@ -557,10 +557,11 @@ Queue.prototype = {
     xBoundary : 300,
     attributes : [ 'arguments', 'auto_delete', 'durable', 'messages',
                    'messages_ready', 'messages_unacknowledged', 'message_stats',
-                   'node', 'owner_pid_details' ],
+                   'node', 'owner_pid_details', 'vhost' ],
     pos : vec3.create(),
     fontSize : 12,
     spring : new Spring(),
+    details : undefined,
     type : 'queue'
 };
 Queue.prototype.spring.octtreeLimit = 10;

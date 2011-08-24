@@ -65,7 +65,7 @@ function channelUpdateReady() {
         var details = JSON.parse(channelClient.responseText);
         if (undefined != details.name &&
             details.name == hoveringOver.name) {
-            hoveringOver.setDetails(details, model);
+            hoveringOver.details = details;
         }
     }
 };
@@ -92,8 +92,8 @@ function draggable(ctx) {
             this.velocity = vec3.create();
             clamp(this);
         } else if (!inPath) {
-            if (undefined != hoveringOver && hoveringOver.type == 'channel') {
-                hoveringOver.setDetails(undefined, model);
+            if (undefined != hoveringOver) {
+                hoveringOver.details = undefined;
             }
             dragging = undefined;
             hoveringOver = undefined;
