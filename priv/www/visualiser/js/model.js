@@ -197,11 +197,6 @@ Model.prototype.enable = function(elem, tree) {
     elem.disabled = false;
 };
 Model.prototype.render = function(ctx) {
-    if (model.rendering.channel.enabled) {
-        for (var i in this.channel) {
-            model.channel[i].render(this, ctx);
-        }
-    }
     if (model.rendering.exchange.enabled) {
         for (var i in this.exchange) {
             model.exchange[i].render(this, ctx);
@@ -210,6 +205,11 @@ Model.prototype.render = function(ctx) {
     if (model.rendering.queue.enabled) {
         for (var i in this.queue) {
             model.queue[i].render(this, ctx);
+        }
+    }
+    if (model.rendering.channel.enabled) {
+        for (var i in this.channel) {
+            model.channel[i].render(this, ctx);
         }
     }
 };
@@ -252,7 +252,9 @@ Channel.prototype = {
                   'user'],
     pos : vec3.create(),
     fontSize : 12,
-    spring : new Spring()
+    spring : new Spring(),
+    details : undefined,
+    type : 'channel'
 };
 Channel.prototype.spring.octtreeLimit = 10;
 Channel.prototype.spring.octtreeRadius = 500;
@@ -306,6 +308,86 @@ Channel.prototype.render = function(model, ctx) {
     ctx.fillStyle = ctx.strokeStyle;
     ctx.fillText(this.name, 0, 0);
     ctx.restore();
+
+    if (undefined != this.details) {
+        var yMax = this.pos[octtree.y] + (dim.width/2) + this.fontSize;
+        var needArrow = false;
+        ctx.lineWidth = 2.0;
+        if (undefined != this.details.consumer_details) {
+            ctx.strokeStyle = "#00a000";
+            for (var i = 0; i < this.details.consumer_details.length; ++i) {
+                var consumer = this.details.consumer_details[i];
+                var queue = consumer.queue_details.name;
+                if (undefined != model.queue[queue]) {
+                    queue = model.queue[queue];
+                    needArrow = true;
+                    ctx.beginPath();
+                    var yMid = (yMax + queue.pos[octtree.y])/2;
+                    var xCtl = queue.pos[octtree.x];
+                    ctx.moveTo(this.pos[octtree.x], yMax);
+                    ctx.bezierCurveTo(this.pos[octtree.x], yMid,
+                                      xCtl, queue.pos[octtree.y] - this.yInit,
+                                      xCtl, queue.pos[octtree.y] - queue.fontSize);
+                    ctx.moveTo(this.pos[octtree.x], yMax);
+                    ctx.closePath();
+                    ctx.stroke();
+
+                    ctx.beginPath();
+                    var dim = ctx.measureText(consumer.consumer_tag);
+                    var xMid = (this.pos[octtree.x] + xCtl)/2;
+                    yMid = (yMid + queue.pos[octtree.y] - this.yInit)/2;
+                    ctx.textBaseline = "middle";
+                    ctx.textAlign = "center";
+                    ctx.fillStyle = "rgba(255, 255, 255, 0.67);";
+                    ctx.fillRect(xMid - dim.width/2, yMid - this.fontSize/2, dim.width, this.fontSize);
+                    ctx.fillStyle = ctx.strokeStyle;
+                    ctx.fillText(consumer.consumer_tag, xMid, yMid);
+                    ctx.closePath();
+                }
+            }
+            if (needArrow) {
+                ctx.beginPath();
+                ctx.moveTo(this.pos[octtree.x], yMax);
+                ctx.lineTo(this.pos[octtree.x] - (this.fontSize/2), yMax + this.fontSize);
+                ctx.lineTo(this.pos[octtree.x] + (this.fontSize/2), yMax + this.fontSize);
+                ctx.closePath();
+                ctx.fillStyle = ctx.strokeStyle;
+                ctx.fill();
+            }
+        }
+
+        if (undefined != this.details.publishes) {
+            ctx.strokeStyle = "#0000a0";
+            for (var i = 0; i < this.details.publishes.length; ++i) {
+                var publisher = this.details.publishes[i];
+                var exchange = publisher.exchange.name;
+                if (undefined != model.exchange[exchange]) {
+                    exchange = model.exchange[exchange];
+                    ctx.beginPath();
+                    var yMid = (yMax + exchange.pos[octtree.y])/2;
+                    var xCtl = exchange.pos[octtree.x];
+                    ctx.moveTo(this.pos[octtree.x], yMax);
+                    ctx.bezierCurveTo(this.pos[octtree.x], yMid,
+                                      xCtl, exchange.pos[octtree.y] - this.yInit,
+                                      xCtl, exchange.pos[octtree.y] - exchange.fontSize);
+                    ctx.moveTo(this.pos[octtree.x], yMax);
+                    ctx.closePath();
+                    ctx.stroke();
+
+                    ctx.beginPath();
+                    ctx.moveTo(exchange.pos[octtree.x],
+                               exchange.pos[octtree.y] - exchange.fontSize);
+                    ctx.lineTo(exchange.pos[octtree.x] - exchange.fontSize / 2,
+                               exchange.pos[octtree.y] - 2 * exchange.fontSize);
+                    ctx.lineTo(exchange.pos[octtree.x] + exchange.fontSize / 2,
+                               exchange.pos[octtree.y] - 2 * exchange.fontSize);
+                    ctx.closePath();
+                    ctx.fillStyle = ctx.strokeStyle;
+                    ctx.fill();
+                }
+            }
+        }
+    }
 };
 Channel.prototype.preStroke = function(ctx) {
 };
@@ -328,6 +410,9 @@ Channel.prototype.enable = function(model) {
         maxY(this, model.channel);
         this.pos[octtree.y] += this.xIncr;
     }
+};
+Channel.prototype.setDetails = function(details, model) {
+    this.details = details;
 };
 
 function Exchange(tree, elem, model) {
@@ -361,7 +446,8 @@ Exchange.prototype = {
                    'message_stats_out', 'message_stats_in' ],
     pos : vec3.create(),
     fontSize : 12,
-    spring : new Spring()
+    spring : new Spring(),
+    type : 'exchange'
 };
 Exchange.prototype.spring.octtreeLimit = 10;
 Exchange.prototype.spring.octtreeRadius = 500;
@@ -478,7 +564,8 @@ Queue.prototype = {
                    'node', 'owner_pid_details' ],
     pos : vec3.create(),
     fontSize : 12,
-    spring : new Spring()
+    spring : new Spring(),
+    type : 'queue'
 };
 Queue.prototype.spring.octtreeLimit = 10;
 Queue.prototype.spring.octtreeRadius = 500;
@@ -569,7 +656,8 @@ Binding.prototype = {
     attributes : [ 'arguments' ],
     offset : 150,
     fontSize : 12,
-    loopOffset : 50
+    loopOffset : 50,
+    type : 'binding'
 };
 Binding.prototype.set = function(elems) {
     this.keys = {};

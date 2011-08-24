@@ -14,10 +14,13 @@
 <script type="text/javascript">
 
 var updatePeriod = 1000; // 1 second
-
 var updateTimer = undefined;
+
 var client = new XMLHttpRequest();
 client.onreadystatechange = updateReady;
+
+var channelClient = new XMLHttpRequest();
+channelClient.onreadystatechange = channelUpdateReady;
 
 var configuration = undefined;
 
@@ -49,11 +52,33 @@ function updateReady() {
     }
 };
 
+function getChannel(channel) {
+    channelClient.open("GET", "/api/channels/" + encodeURIComponent(channel.name));
+    channelClient.send();
+};
+
+function channelUpdateReady() {
+    if (channelClient.readyState == 4 &&
+        channelClient.status == 200 &&
+        undefined != hoveringOver &&
+        hoveringOver.type == 'channel') {
+        var details = JSON.parse(channelClient.responseText);
+        if (undefined != details.name &&
+            details.name == hoveringOver.name) {
+            hoveringOver.setDetails(details, model);
+        }
+    }
+};
+
 function draggable(ctx) {
     var inPath = ctx.isPointInPath(mousePos[octtree.x], mousePos[octtree.y]);
     if ((inPath && undefined == hoveringOver) || dragging == this || hoveringOver == this) {
         ctx.fillStyle = highlight;
         ctx.fill();
+
+        if (hoveringOver != this && this.type == 'channel') {
+            getChannel(this);
+        }
 
         hoveringOver = this;
         if (mouseDown) {
@@ -67,6 +92,9 @@ function draggable(ctx) {
             this.velocity = vec3.create();
             clamp(this);
         } else if (!inPath) {
+            if (undefined != hoveringOver && hoveringOver.type == 'channel') {
+                hoveringOver.setDetails(undefined, model);
+            }
             dragging = undefined;
             hoveringOver = undefined;
             mouseDragOffsetVec = undefined;
@@ -472,7 +500,7 @@ function toggleRendering(hiddenElemId, showButtonElemId, type) {
     } else {
         for (var i in model[type]) {
             if (! model[type][i].disabled) {
-                model.rendering[type].on_enable[model[type][i].name] = true;            
+                model.rendering[type].on_enable[model[type][i].name] = true;
                 model.disable(model[type][i], tree);
             }
         }
