@@ -84,11 +84,15 @@ function detailsUpdateReady() {
         detailsClient.status == 200 &&
         undefined != hoveringOver &&
         hoveringOver == detailsInFlight) {
-        var details = JSON.parse(detailsClient.responseText);
-        if (undefined != details.name &&
-            details.name == detailsInFlight.name) {
-            detailsInFlight.details = details;
-            setTimeout("repeatGetDetails();", updatePeriod);
+        try {
+            var details = JSON.parse(detailsClient.responseText);
+            if (undefined != details.name &&
+                details.name == detailsInFlight.name) {
+                detailsInFlight.details = details;
+                setTimeout("repeatGetDetails();", updatePeriod);
+            }
+        } catch (err) {
+            // We probably cancelled it as we were receiving data.
         }
     }
 };

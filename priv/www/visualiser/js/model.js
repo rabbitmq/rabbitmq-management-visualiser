@@ -317,7 +317,6 @@ Channel.prototype.render = function(model, ctx) {
     ctx.restore();
 
     if (undefined != this.details) {
-        var needArrow = false;
         ctx.lineWidth = 2.0;
         if (undefined != this.details.consumer_details) {
             ctx.strokeStyle = "#00a000";
@@ -325,18 +324,8 @@ Channel.prototype.render = function(model, ctx) {
                 var consumer = this.details.consumer_details[i];
                 var queue = consumer.queue_details.name;
                 if (undefined != model.queue[queue] && ! model.queue[queue].disabled) {
-                    needArrow = true;
                     Consumer.render(this, model.queue[queue], ctx, consumer.consumer_tag);
                 }
-            }
-            if (needArrow) {
-                ctx.beginPath();
-                ctx.moveTo(this.pos[octtree.x], this.yMax);
-                ctx.lineTo(this.pos[octtree.x] - (this.fontSize/2), this.yMax + this.fontSize);
-                ctx.lineTo(this.pos[octtree.x] + (this.fontSize/2), this.yMax + this.fontSize);
-                ctx.closePath();
-                ctx.fillStyle = ctx.strokeStyle;
-                ctx.fill();
             }
         }
 
@@ -476,6 +465,16 @@ Exchange.prototype.render = function(model, ctx) {
 
     this.xMin = this.pos[octtree.x] - (dim.width / 2) - this.fontSize;
     this.xMax = this.pos[octtree.x] + (dim.width / 2) + this.fontSize;
+
+    if (undefined != this.details && undefined != this.details.incoming) {
+        ctx.strokeStyle = "#00a000";
+        for (var i = 0; i < this.details.incoming.length; ++i) {
+            var channel = this.details.incoming[i].channel_details.name;
+            if (undefined != model.channel[channel] && ! model.channel[channel].disabled) {
+                Publisher.render(model.channel[channel], this, ctx);
+            }
+        }
+    }
 };
 Exchange.prototype.preStroke = function(ctx) {
 };
@@ -589,6 +588,17 @@ Queue.prototype.render = function(model, ctx) {
 
     this.xMin = this.pos[octtree.x] - (dim.width / 2) - this.fontSize;
     this.xMax = this.pos[octtree.x] + (dim.width / 2) + this.fontSize;
+
+    if (undefined != this.details && undefined != this.details.consumer_details) {
+        ctx.strokeStyle = "#0000a0";
+        for (var i = 0; i < this.details.consumer_details.length; ++i) {
+            var channel = this.details.consumer_details[i].channel_details.name;
+            if (undefined != model.channel[channel] && ! model.channel[channel].disabled) {
+                Consumer.render(model.channel[channel], this, ctx,
+                                this.details.consumer_details[i].consumer_tag);
+            }
+        }
+    }
 };
 Queue.prototype.preStroke = function(ctx) {
 };
@@ -719,6 +729,14 @@ Consumer.render = function(channel, queue, ctx, consumerTag) {
     ctx.fillRect(mid[0] - dim.width/2, mid[1] - channel.fontSize/2, dim.width, channel.fontSize);
     ctx.fillStyle = ctx.strokeStyle;
     ctx.fillText(consumerTag, mid[0], mid[1]);
+
+    ctx.beginPath();
+    ctx.moveTo(channel.pos[octtree.x], channel.yMax);
+    ctx.lineTo(channel.pos[octtree.x] - (channel.fontSize/2), channel.yMax + channel.fontSize);
+    ctx.lineTo(channel.pos[octtree.x] + (channel.fontSize/2), channel.yMax + channel.fontSize);
+    ctx.closePath();
+    ctx.fillStyle = ctx.strokeStyle;
+    ctx.fill();
 };
 
 var Publisher = {};
