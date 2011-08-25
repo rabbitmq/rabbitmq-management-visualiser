@@ -319,7 +319,7 @@ Channel.prototype.render = function(model, ctx) {
             for (var i = 0; i < this.details.consumer_details.length; ++i) {
                 var consumer = this.details.consumer_details[i];
                 var queue = consumer.queue_details.name;
-                if (undefined != model.queue[queue]) {
+                if (undefined != model.queue[queue] && ! model.queue[queue].disabled) {
                     queue = model.queue[queue];
                     needArrow = true;
                     ctx.beginPath();
@@ -360,7 +360,7 @@ Channel.prototype.render = function(model, ctx) {
             for (var i = 0; i < this.details.publishes.length; ++i) {
                 var publisher = this.details.publishes[i];
                 var exchange = publisher.exchange.name;
-                if (undefined != model.exchange[exchange]) {
+                if (undefined != model.exchange[exchange] && ! model.exchange[exchange].disabled) {
                     exchange = model.exchange[exchange];
                     ctx.beginPath();
                     var yMid = (yMax + exchange.pos[octtree.y])/2;
