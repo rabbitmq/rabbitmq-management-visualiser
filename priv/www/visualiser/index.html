@@ -233,6 +233,16 @@ function resizeCanvas() {
             }
             e = e.parentNode;
         }
+        canvasLeft = 0;
+        canvasTop = 0;
+        var e = canvas.parentNode;
+        while (undefined != e) {
+            if (undefined != e.offsetLeft && undefined != e.offsetTop) {
+                canvasLeft += e.offsetLeft;
+                canvasTop += e.offsetTop;
+            }
+            e = e.parentNode;
+        }
     }
 };
 
