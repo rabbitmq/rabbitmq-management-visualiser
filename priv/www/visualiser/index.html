@@ -19,8 +19,9 @@ var updateTimer = undefined;
 var client = new XMLHttpRequest();
 client.onreadystatechange = updateReady;
 
-var channelClient = new XMLHttpRequest();
-channelClient.onreadystatechange = channelUpdateReady;
+var detailsClient = new XMLHttpRequest();
+detailsClient.onreadystatechange = detailsUpdateReady;
+var detailsInFlight = undefined;
 
 var configuration = undefined;
 
@@ -52,20 +53,42 @@ function updateReady() {
     }
 };
 
-function getChannel(channel) {
-    channelClient.open("GET", "/api/channels/" + encodeURIComponent(channel.name));
-    channelClient.send();
+Channel.prototype.getDetails = getChannel;
+Exchange.prototype.getDetails = getExchange;
+Queue.prototype.getDetails = getQueue;
+
+function getChannel() {
+    detailsInFlight = this;
+    detailsClient.abort();
+    detailsClient.open("GET", "/api/channels/" + encodeURIComponent(this.name));
+    detailsClient.send();
 };
 
-function channelUpdateReady() {
-    if (channelClient.readyState == 4 &&
-        channelClient.status == 200 &&
+function getExchange() {
+    detailsInFlight = this;
+    detailsClient.abort();
+    detailsClient.open("GET", "/api/exchanges/" + encodeURIComponent(this.vhost) +
+                       "/" + encodeURIComponent(this.name));
+    detailsClient.send();
+};
+
+function getQueue() {
+    detailsInFlight = this;
+    detailsClient.abort();
+    detailsClient.open("GET", "/api/queues/" + encodeURIComponent(this.vhost) +
+                       "/" + encodeURIComponent(this.name));
+    detailsClient.send();
+};
+
+function detailsUpdateReady() {
+    if (detailsClient.readyState == 4 &&
+        detailsClient.status == 200 &&
         undefined != hoveringOver &&
-        hoveringOver.type == 'channel') {
-        var details = JSON.parse(channelClient.responseText);
+        hoveringOver == detailsInFlight) {
+        var details = JSON.parse(detailsClient.responseText);
         if (undefined != details.name &&
-            details.name == hoveringOver.name) {
-            hoveringOver.details = details;
+            details.name == detailsInFlight.name) {
+            detailsInFlight.details = details;
         }
     }
 };
@@ -76,8 +99,8 @@ function draggable(ctx) {
         ctx.fillStyle = highlight;
         ctx.fill();
 
-        if (hoveringOver != this && this.type == 'channel') {
-            getChannel(this);
+        if (hoveringOver != this) {
+            this.getDetails();
         }
 
         hoveringOver = this;

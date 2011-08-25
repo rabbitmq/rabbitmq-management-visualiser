@@ -374,6 +374,8 @@ Channel.prototype.enable = function(model) {
         this.pos[octtree.y] += this.xIncr;
     }
 };
+Channel.prototype.getDetails = function() {
+};
 
 function Exchange(tree, elem, model) {
     this.name = elem.name;
@@ -492,6 +494,8 @@ Exchange.prototype.enable = function(model) {
     this.pos[octtree.x] = this.xInit;
     maxY(this, model.exchange);
 };
+Exchange.prototype.getDetails = function() {
+};
 
 function Queue(tree, elem, model) {
     this.name = elem.name;
@@ -602,6 +606,8 @@ Queue.prototype.enable = function(model) {
     model.queues_visible++;
     this.pos[octtree.x] = this.xInit;
     maxY(this, model.queue);
+};
+Queue.prototype.getDetails = function() {
 };
 
 function Binding(elems) {
