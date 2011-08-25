@@ -232,6 +232,9 @@ function Channel(tree, elem, model) {
 
     maxX(this, model.channel);
 
+    this.yMin = this.pos[octtree.y];
+    this.yMax = this.pos[octtree.y];
+
     this.next_pos = vec3.create(this.pos);
     this.mass = 0.1;
     this.velocity = vec3.create();
@@ -290,16 +293,19 @@ Channel.prototype.render = function(model, ctx) {
         return;
     }
 
+    this.yMax = this.pos[octtree.y] + (dim.width/2) + this.fontSize;
+    this.yMin = this.pos[octtree.y] - (dim.width/2) - this.fontSize;
+
     ctx.beginPath();
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
     ctx.lineWidth = 2.0;
     ctx.strokeStyle = "black";
-    ctx.moveTo(this.pos[octtree.x] - this.fontSize, this.pos[octtree.y] - (dim.width/2) - this.fontSize);
-    ctx.lineTo(this.pos[octtree.x] + this.fontSize, this.pos[octtree.y] - (dim.width/2) - this.fontSize);
-    ctx.lineTo(this.pos[octtree.x] + this.fontSize, this.pos[octtree.y] + (dim.width/2) + this.fontSize);
-    ctx.lineTo(this.pos[octtree.x] - this.fontSize, this.pos[octtree.y] + (dim.width/2) + this.fontSize);
+    ctx.moveTo(this.pos[octtree.x] - this.fontSize, this.yMin);
+    ctx.lineTo(this.pos[octtree.x] + this.fontSize, this.yMin);
+    ctx.lineTo(this.pos[octtree.x] + this.fontSize, this.yMax);
+    ctx.lineTo(this.pos[octtree.x] - this.fontSize, this.yMax);
     ctx.closePath();
     this.preStroke(ctx);
 
@@ -311,7 +317,6 @@ Channel.prototype.render = function(model, ctx) {
     ctx.restore();
 
     if (undefined != this.details) {
-        var yMax = this.pos[octtree.y] + (dim.width/2) + this.fontSize;
         var needArrow = false;
         ctx.lineWidth = 2.0;
         if (undefined != this.details.consumer_details) {
@@ -320,35 +325,15 @@ Channel.prototype.render = function(model, ctx) {
                 var consumer = this.details.consumer_details[i];
                 var queue = consumer.queue_details.name;
                 if (undefined != model.queue[queue] && ! model.queue[queue].disabled) {
-                    queue = model.queue[queue];
                     needArrow = true;
-                    ctx.beginPath();
-                    var yMid = (yMax + queue.pos[octtree.y])/2;
-                    var xCtl = queue.pos[octtree.x];
-                    ctx.moveTo(this.pos[octtree.x], yMax);
-                    ctx.bezierCurveTo(this.pos[octtree.x], yMid,
-                                      xCtl, queue.pos[octtree.y] - this.yInit,
-                                      xCtl, queue.pos[octtree.y] - queue.fontSize);
-                    ctx.moveTo(this.pos[octtree.x], yMax);
-                    ctx.closePath();
-                    ctx.stroke();
-
-                    var dim = ctx.measureText(consumer.consumer_tag);
-                    var xMid = (this.pos[octtree.x] + xCtl)/2;
-                    yMid = (yMid + queue.pos[octtree.y] - this.yInit)/2;
-                    ctx.textBaseline = "middle";
-                    ctx.textAlign = "center";
-                    ctx.fillStyle = "rgba(255, 255, 255, 0.67)";
-                    ctx.fillRect(xMid - dim.width/2, yMid - this.fontSize/2, dim.width, this.fontSize);
-                    ctx.fillStyle = ctx.strokeStyle;
-                    ctx.fillText(consumer.consumer_tag, xMid, yMid);
+                    Consumer.render(this, model.queue[queue], ctx, consumer.consumer_tag);
                 }
             }
             if (needArrow) {
                 ctx.beginPath();
-                ctx.moveTo(this.pos[octtree.x], yMax);
-                ctx.lineTo(this.pos[octtree.x] - (this.fontSize/2), yMax + this.fontSize);
-                ctx.lineTo(this.pos[octtree.x] + (this.fontSize/2), yMax + this.fontSize);
+                ctx.moveTo(this.pos[octtree.x], this.yMax);
+                ctx.lineTo(this.pos[octtree.x] - (this.fontSize/2), this.yMax + this.fontSize);
+                ctx.lineTo(this.pos[octtree.x] + (this.fontSize/2), this.yMax + this.fontSize);
                 ctx.closePath();
                 ctx.fillStyle = ctx.strokeStyle;
                 ctx.fill();
@@ -361,28 +346,7 @@ Channel.prototype.render = function(model, ctx) {
                 var publisher = this.details.publishes[i];
                 var exchange = publisher.exchange.name;
                 if (undefined != model.exchange[exchange] && ! model.exchange[exchange].disabled) {
-                    exchange = model.exchange[exchange];
-                    ctx.beginPath();
-                    var yMid = (yMax + exchange.pos[octtree.y])/2;
-                    var xCtl = exchange.pos[octtree.x];
-                    ctx.moveTo(this.pos[octtree.x], yMax);
-                    ctx.bezierCurveTo(this.pos[octtree.x], yMid,
-                                      xCtl, exchange.pos[octtree.y] - this.yInit,
-                                      xCtl, exchange.pos[octtree.y] - exchange.fontSize);
-                    ctx.moveTo(this.pos[octtree.x], yMax);
-                    ctx.closePath();
-                    ctx.stroke();
-
-                    ctx.beginPath();
-                    ctx.moveTo(exchange.pos[octtree.x],
-                               exchange.pos[octtree.y] - exchange.fontSize);
-                    ctx.lineTo(exchange.pos[octtree.x] - exchange.fontSize / 2,
-                               exchange.pos[octtree.y] - 2 * exchange.fontSize);
-                    ctx.lineTo(exchange.pos[octtree.x] + exchange.fontSize / 2,
-                               exchange.pos[octtree.y] - 2 * exchange.fontSize);
-                    ctx.closePath();
-                    ctx.fillStyle = ctx.strokeStyle;
-                    ctx.fill();
+                    Publisher.render(this, model.exchange[exchange], ctx);
                 }
             }
         }
@@ -725,6 +689,58 @@ Binding.prototype.render = function(model, ctx) {
 Binding.prototype.preStroke = function(source, destination, ctx) {
 };
 
+var Consumer = {};
+Consumer.render = function(channel, queue, ctx, consumerTag) {
+    ctx.beginPath();
+    var yMid = (channel.yMax + queue.pos[octtree.y])/2;
+    var xCtl = queue.pos[octtree.x];
+    ctx.moveTo(channel.pos[octtree.x], channel.yMax);
+    ctx.bezierCurveTo(channel.pos[octtree.x], yMid,
+                      xCtl, queue.pos[octtree.y] - channel.yInit,
+                      xCtl, queue.pos[octtree.y] - queue.fontSize);
+    ctx.moveTo(channel.pos[octtree.x], channel.yMax);
+    ctx.closePath();
+    ctx.stroke();
+
+    var dim = ctx.measureText(consumerTag);
+    var mid = bezierMid(channel.pos[octtree.x], channel.yMax,
+                        channel.pos[octtree.x], yMid,
+                        xCtl, queue.pos[octtree.y] - channel.yInit,
+                        xCtl, queue.pos[octtree.y] - queue.fontSize);
+    ctx.textBaseline = "middle";
+    ctx.textAlign = "center";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.67)";
+    ctx.fillRect(mid[0] - dim.width/2, mid[1] - channel.fontSize/2, dim.width, channel.fontSize);
+    ctx.fillStyle = ctx.strokeStyle;
+    ctx.fillText(consumerTag, mid[0], mid[1]);
+};
+
+var Publisher = {};
+Publisher.render = function(channel, exchange, ctx) {
+    ctx.beginPath();
+    var yMid = (channel.yMax + exchange.pos[octtree.y])/2;
+    var xCtl = exchange.pos[octtree.x];
+    ctx.moveTo(channel.pos[octtree.x], channel.yMax);
+    ctx.bezierCurveTo(channel.pos[octtree.x], yMid,
+                      xCtl, exchange.pos[octtree.y] - channel.yInit,
+                      xCtl, exchange.pos[octtree.y] - exchange.fontSize);
+    ctx.moveTo(channel.pos[octtree.x], channel.yMax);
+    ctx.closePath();
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(exchange.pos[octtree.x],
+               exchange.pos[octtree.y] - exchange.fontSize);
+    ctx.lineTo(exchange.pos[octtree.x] - exchange.fontSize / 2,
+               exchange.pos[octtree.y] - 2 * exchange.fontSize);
+    ctx.lineTo(exchange.pos[octtree.x] + exchange.fontSize / 2,
+               exchange.pos[octtree.y] - 2 * exchange.fontSize);
+    ctx.closePath();
+    ctx.fillStyle = ctx.strokeStyle;
+    ctx.fill();
+
+};
+
 function maxY(elem, subModel) {
     elem.pos[octtree.y] = elem.yInit;
     for (var i in subModel) {
@@ -745,4 +761,23 @@ function maxX(elem, subModel) {
                          subModel[i].pos[octtree.x] + elem.xIncr);
         }
     }
+};
+
+function bezierMid(startX, startY, ctl1X, ctl1Y, ctl2X, ctl2Y, endX, endY) {
+    var start_ctl1X = (startX + ctl1X) /2;
+    var start_ctl1Y = (startY + ctl1Y) /2;
+
+    var end_ctl2X = (endX + ctl2X) /2;
+    var end_ctl2Y = (endY + ctl2Y) /2;
+
+    var ctl1_ctl2X = (ctl1X + ctl2X) /2;
+    var ctl1_ctl2Y = (ctl1Y + ctl2Y) /2;
+
+    var mid1X = (start_ctl1X + ctl1_ctl2X) /2;
+    var mid1Y = (start_ctl1Y + ctl1_ctl2Y) /2;
+
+    var mid2X = (end_ctl2X + ctl1_ctl2X) /2;
+    var mid2Y = (end_ctl2Y + ctl1_ctl2Y) /2;
+
+    return [(mid1X + mid2X)/2, (mid1Y + mid2Y)/2];
 };
