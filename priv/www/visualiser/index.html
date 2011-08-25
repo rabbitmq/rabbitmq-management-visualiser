@@ -14,7 +14,6 @@
 <script type="text/javascript">
 
 var updatePeriod = 1000; // 1 second
-var updateTimer = undefined;
 
 var client = new XMLHttpRequest();
 client.onreadystatechange = updateReady;
@@ -47,7 +46,7 @@ function update() {
 
 function updateReady() {
     if (client.readyState == 4 && client.status == 200) {
-        updateTimer = setTimeout("update();", updatePeriod);
+        setTimeout("update();", updatePeriod);
         configuration = JSON.parse(client.responseText);
         model.rebuild(tree, configuration);
     }
@@ -89,7 +88,14 @@ function detailsUpdateReady() {
         if (undefined != details.name &&
             details.name == detailsInFlight.name) {
             detailsInFlight.details = details;
+            setTimeout("repeatGetDetails();", updatePeriod);
         }
+    }
+};
+
+function repeatGetDetails() {
+    if (undefined != hoveringOver) {
+        hoveringOver.getDetails();
     }
 };
 
