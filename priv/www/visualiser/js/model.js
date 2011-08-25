@@ -384,6 +384,14 @@ Channel.prototype.enable = function(model) {
 };
 Channel.prototype.getDetails = function() {
 };
+Channel.prototype.stringAttributes = function() {
+    var obj = {};
+    for (var i in this.attributes) {
+        var attName = this.attributes[i];
+        obj[attName] = "" + this[attName];
+    }
+    return obj;
+};
 
 function Exchange(tree, elem, model) {
     this.name = elem.name;
@@ -530,6 +538,14 @@ Exchange.prototype.enable = function(model) {
 };
 Exchange.prototype.getDetails = function() {
 };
+Exchange.prototype.stringAttributes = function() {
+    var obj = {};
+    for (var i in this.attributes) {
+        var attName = this.attributes[i];
+        obj[attName] = "" + this[attName];
+    }
+    return obj;
+};
 
 function Queue(tree, elem, model) {
     this.name = elem.name;
@@ -659,6 +675,14 @@ Queue.prototype.enable = function(model) {
     maxY(this, model.queue);
 };
 Queue.prototype.getDetails = function() {
+};
+Queue.prototype.stringAttributes = function() {
+    var obj = {};
+    for (var i in this.attributes) {
+        var attName = this.attributes[i];
+        obj[attName] = "" + this[attName];
+    }
+    return obj;
 };
 
 function Binding(elems) {

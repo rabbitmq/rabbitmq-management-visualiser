@@ -66,8 +66,10 @@ function getChannel() {
 function getExchange() {
     detailsInFlight = this;
     detailsClient.abort();
+    var name = this.name;
+    if (name == "") { name = "amq.default"; }
     detailsClient.open("GET", "/api/exchanges/" + encodeURIComponent(this.vhost) +
-                       "/" + encodeURIComponent(this.name));
+                       "/" + encodeURIComponent(name));
     detailsClient.send();
 };
 
@@ -83,12 +85,14 @@ function detailsUpdateReady() {
     if (detailsClient.readyState == 4 &&
         detailsClient.status == 200 &&
         undefined != hoveringOver &&
-        hoveringOver == detailsInFlight) {
+        hoveringOver.object_type == detailsInFlight.object_type &&
+        hoveringOver.name == detailsInFlight.name) {
         try {
             var details = JSON.parse(detailsClient.responseText);
             if (undefined != details.name &&
                 details.name == detailsInFlight.name) {
-                detailsInFlight.details = details;
+                model[detailsInFlight.object_type][detailsInFlight.name].details = details;
+                setDetails(model[detailsInFlight.object_type][detailsInFlight.name]);
                 setTimeout("repeatGetDetails();", updatePeriod);
             }
         } catch (err) {
@@ -102,6 +106,34 @@ function repeatGetDetails() {
         hoveringOver.getDetails();
     }
 };
+
+function setDetails(elem) {
+    var details = document.getElementById("details");
+    if (undefined == elem) {
+        details.innerHTML = "";
+    } else {
+        var strAtts = elem.stringAttributes();
+        var visibleRows = Math.floor(details.clientHeight / 16); // line-height + padding;
+        var columns = Math.ceil(elem.attributes.length / visibleRows);
+        var column = 0;
+        var str = "<table><tr>";
+        for (var i in elem.attributes) {
+            ++column;
+            var attName = elem.attributes[i];
+            if (undefined != strAtts[attName]) {
+                str += "<th>" + attName + "</th><td>" + strAtts[attName] + "</td>";
+            } else {
+                str += "<th>" + attName + "</th><td></td>";
+            }
+            if (column == columns) {
+                column = 0;
+                str += "</tr><tr>";
+            }
+        }
+        str += "</tr></table>";
+        document.getElementById("details").innerHTML = str;
+    }
+}
 
 function draggable(model, ctx) {
     var inPath = ctx.isPointInPath(mousePos[octtree.x], mousePos[octtree.y]);
@@ -243,6 +275,9 @@ function resizeCanvas() {
             }
             e = e.parentNode;
         }
+        if (undefined != hoveringOver && undefined != hoveringOver.details) {
+            setDetails(hoveringOver);
+        }
     }
 };
 
@@ -269,7 +304,9 @@ function initCanvas(canvas) {
             hoveringOver = undefined;
             dragging = undefined;
         } else {
-            if (undefined != hoveringOver) {
+            if (undefined == hoveringOver) {
+                setDetails(undefined);
+            } else {
                 mouseDown = true;
                 mouseDragOffsetVec = undefined;
             }
@@ -280,16 +317,6 @@ function initCanvas(canvas) {
         mouseDragOffsetVec = undefined;
         dragging = undefined;
     };
-    canvasLeft = 0;
-    canvasTop = 0;
-    var e = canvas.parentNode;
-    while (undefined != e) {
-        if (undefined != e.offsetLeft && undefined != e.offsetTop) {
-            canvasLeft += e.offsetLeft;
-            canvasTop += e.offsetTop;
-        }
-        e = e.parentNode;
-    }
     try {
         ctx = canvas.getContext("2d");
     } catch (e) {
@@ -602,7 +629,7 @@ overflow: auto;
 
 #main{
 position: fixed;
-top: 0;
+top: 10%;
 left: 16%;
 right: 0;
 bottom: 0;
@@ -633,6 +660,18 @@ overflow: hidden;
 height: 100%;
 max-height: 100%;
 }
+
+#details{
+height: 10%;
+position: fixed;
+top: 0px;
+right: 0px;
+left: 16%;
+overflow: auto;
+}
+
+table td { padding : 1px 10px 1px 4px; margin : 0; border: none; line-height: 14px; text-align: left; }
+table th { padding : 1px 4px 1px 10px; margin : 0; border: none; line-height: 14px; text-align: right; }
 
 </style>
 </head>
@@ -675,5 +714,6 @@ max-height: 100%;
     <div id="main" onscroll="canvasScroll();">
         <canvas id="topology_canvas"></canvas>
     </div>
+    <div id="details"></div>
 </body>
 </html>
