@@ -103,7 +103,7 @@ function repeatGetDetails() {
     }
 };
 
-function draggable(ctx) {
+function draggable(model, ctx) {
     var inPath = ctx.isPointInPath(mousePos[octtree.x], mousePos[octtree.y]);
     if ((inPath && undefined == hoveringOver) || dragging == this || hoveringOver == this) {
         ctx.fillStyle = highlight;
@@ -136,7 +136,7 @@ function draggable(ctx) {
         ctx.fillStyle = "white";
         ctx.fill();
     }
-    if (undefined != hoveringOver && hoveringOver != this) {
+    if (undefined != hoveringOver && hoveringOver != this && ! model.isHighlighted(this)) {
         ctx.strokeStyle = faded;
     }
     ctx.stroke();
@@ -144,7 +144,7 @@ function draggable(ctx) {
 Channel.prototype.preStroke = draggable;
 Exchange.prototype.preStroke = draggable;
 Queue.prototype.preStroke = draggable;
-Binding.prototype.preStroke = function(source, destination, ctx) {
+Binding.prototype.preStroke = function(source, destination, model, ctx) {
     var drawBindingKeys = false;
     if (undefined == hoveringOver) {
         drawBindingKeys = ctx.isPointInPath(mousePos[octtree.x], mousePos[octtree.y]);

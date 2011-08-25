@@ -16,6 +16,10 @@ function Model() {
                        connection : { enabled   : true,
                                       on_enable : {} }
                      };
+    this.highlighted = { exchange   : {},
+                         queue      : {},
+                         channel    : {},
+                         connection : {} };
 };
 
 Model.prototype.permitted_exchanges_visible = 10;
@@ -222,6 +226,18 @@ Model.prototype.vhost_add = function (elem) {
 };
 Model.prototype.vhost_del = function (elem) {
 };
+Model.prototype.resetHighlighted = function () {
+    this.highlighted = { exchange   : {},
+                         queue      : {},
+                         channel    : {},
+                         connection : {} };
+};
+Model.prototype.setHighlighted = function (elem) {
+    this.highlighted[elem.object_type][elem.name] = elem;
+};
+Model.prototype.isHighlighted = function (elem) {
+    return (undefined != this.highlighted[elem.object_type][elem.name]);
+}
 
 function Channel(tree, elem, model) {
     this.name = elem.name;
@@ -259,7 +275,7 @@ Channel.prototype = {
     fontSize : 12,
     spring : new Spring(),
     details : undefined,
-    type : 'channel'
+    object_type : 'channel'
 };
 Channel.prototype.spring.octtreeLimit = 10;
 Channel.prototype.spring.octtreeRadius = 500;
@@ -307,7 +323,7 @@ Channel.prototype.render = function(model, ctx) {
     ctx.lineTo(this.pos[octtree.x] + this.fontSize, this.yMax);
     ctx.lineTo(this.pos[octtree.x] - this.fontSize, this.yMax);
     ctx.closePath();
-    this.preStroke(ctx);
+    this.preStroke(model, ctx);
 
     ctx.save();
     ctx.translate(this.pos[octtree.x], this.pos[octtree.y]);
@@ -317,6 +333,7 @@ Channel.prototype.render = function(model, ctx) {
     ctx.restore();
 
     if (undefined != this.details) {
+        model.resetHighlighted();
         ctx.lineWidth = 2.0;
         if (undefined != this.details.consumer_details) {
             ctx.strokeStyle = "#00a000";
@@ -324,6 +341,7 @@ Channel.prototype.render = function(model, ctx) {
                 var consumer = this.details.consumer_details[i];
                 var queue = consumer.queue_details.name;
                 if (undefined != model.queue[queue] && ! model.queue[queue].disabled) {
+                    model.setHighlighted(model.queue[queue]);
                     Consumer.render(this, model.queue[queue], ctx, consumer.consumer_tag);
                 }
             }
@@ -335,13 +353,14 @@ Channel.prototype.render = function(model, ctx) {
                 var publisher = this.details.publishes[i];
                 var exchange = publisher.exchange.name;
                 if (undefined != model.exchange[exchange] && ! model.exchange[exchange].disabled) {
+                    model.setHighlighted(model.exchange[exchange]);
                     Publisher.render(this, model.exchange[exchange], ctx);
                 }
             }
         }
     }
 };
-Channel.prototype.preStroke = function(ctx) {
+Channel.prototype.preStroke = function(model, ctx) {
 };
 Channel.prototype.animate = function(elapsed) {
     if (this.yBoundary > this.pos[octtree.y]) {
@@ -399,7 +418,7 @@ Exchange.prototype = {
     fontSize : 12,
     spring : new Spring(),
     details : undefined,
-    type : 'exchange'
+    object_type : 'exchange'
 };
 Exchange.prototype.spring.octtreeLimit = 10;
 Exchange.prototype.spring.octtreeRadius = 500;
@@ -458,7 +477,7 @@ Exchange.prototype.render = function(model, ctx) {
             this.fontSize, 3 * Math.PI / 2, Math.PI / 2, false);
     ctx.closePath();
 
-    this.preStroke(ctx);
+    this.preStroke(model, ctx);
 
     ctx.fillStyle = ctx.strokeStyle;
     ctx.fillText(this.name, this.pos[octtree.x], this.pos[octtree.y]);
@@ -466,17 +485,33 @@ Exchange.prototype.render = function(model, ctx) {
     this.xMin = this.pos[octtree.x] - (dim.width / 2) - this.fontSize;
     this.xMax = this.pos[octtree.x] + (dim.width / 2) + this.fontSize;
 
-    if (undefined != this.details && undefined != this.details.incoming) {
+    if (undefined != this.details) {
+        model.resetHighlighted();
+        ctx.lineWidth = 2.0;
         ctx.strokeStyle = "#00a000";
-        for (var i = 0; i < this.details.incoming.length; ++i) {
-            var channel = this.details.incoming[i].channel_details.name;
-            if (undefined != model.channel[channel] && ! model.channel[channel].disabled) {
-                Publisher.render(model.channel[channel], this, ctx);
+        if (undefined != this.details.incoming) {
+            for (var i = 0; i < this.details.incoming.length; ++i) {
+                var channel = this.details.incoming[i].channel_details.name;
+                if (undefined != model.channel[channel] && ! model.channel[channel].disabled) {
+                    model.setHighlighted(model.channel[channel]);
+                    Publisher.render(model.channel[channel], this, ctx);
+                }
             }
         }
+
+        for (var i in this.bindings_outbound.queue) {
+            model.setHighlighted(model.queue[this.bindings_outbound.queue[i].destination]);
+        }
+        for (var i in this.bindings_outbound.exchange) {
+            model.setHighlighted(model.exchange[this.bindings_outbound.exchange[i].destination]);
+        }
+        for (var i in this.bindings_inbound) {
+            model.setHighlighted(model.exchange[this.bindings_inbound[i].source]);
+        }
+
     }
 };
-Exchange.prototype.preStroke = function(ctx) {
+Exchange.prototype.preStroke = function(model, ctx) {
 };
 Exchange.prototype.animate = function(elapsed) {
     if (this.xBoundary > this.pos[octtree.x]) {
@@ -529,7 +564,7 @@ Queue.prototype = {
     fontSize : 12,
     spring : new Spring(),
     details : undefined,
-    type : 'queue'
+    object_type : 'queue'
 };
 Queue.prototype.spring.octtreeLimit = 10;
 Queue.prototype.spring.octtreeRadius = 500;
@@ -581,7 +616,7 @@ Queue.prototype.render = function(model, ctx) {
             this.pos[octtree.y] + this.fontSize);
     ctx.closePath();
 
-    this.preStroke(ctx);
+    this.preStroke(model, ctx);
 
     ctx.fillStyle = ctx.strokeStyle;
     ctx.fillText(text, this.pos[octtree.x], this.pos[octtree.y]);
@@ -590,17 +625,23 @@ Queue.prototype.render = function(model, ctx) {
     this.xMax = this.pos[octtree.x] + (dim.width / 2) + this.fontSize;
 
     if (undefined != this.details && undefined != this.details.consumer_details) {
+        model.resetHighlighted();
+        ctx.lineWidth = 2.0;
         ctx.strokeStyle = "#0000a0";
         for (var i = 0; i < this.details.consumer_details.length; ++i) {
             var channel = this.details.consumer_details[i].channel_details.name;
             if (undefined != model.channel[channel] && ! model.channel[channel].disabled) {
+                model.setHighlighted(model.channel[channel]);
                 Consumer.render(model.channel[channel], this, ctx,
                                 this.details.consumer_details[i].consumer_tag);
             }
         }
+        for (var i in this.bindings_inbound) {
+            model.setHighlighted(model.exchange[this.bindings_inbound[i].source]);
+        }
     }
 };
-Queue.prototype.preStroke = function(ctx) {
+Queue.prototype.preStroke = function(model, ctx) {
 };
 Queue.prototype.animate = function(elapsed) {
     if (this.xBoundary < this.pos[octtree.x]) {
@@ -633,7 +674,7 @@ Binding.prototype = {
     offset : 150,
     fontSize : 12,
     loopOffset : 50,
-    type : 'binding'
+    object_type : 'binding'
 };
 Binding.prototype.set = function(elems) {
     this.keys = {};
@@ -689,7 +730,7 @@ Binding.prototype.render = function(model, ctx) {
             source.pos[octtree.y]+1);
     ctx.moveTo(source.xMax, source.pos[octtree.y]);
     ctx.closePath();
-    this.preStroke(source, destination, ctx);
+    this.preStroke(source, destination, model, ctx);
 
     // draw an arrow head
     ctx.beginPath();
@@ -702,7 +743,7 @@ Binding.prototype.render = function(model, ctx) {
     ctx.fillStyle = ctx.strokeStyle;
     ctx.fill();
 };
-Binding.prototype.preStroke = function(source, destination, ctx) {
+Binding.prototype.preStroke = function(source, destination, model, ctx) {
 };
 
 var Consumer = {};
