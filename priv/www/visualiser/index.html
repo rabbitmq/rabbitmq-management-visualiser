@@ -16,10 +16,8 @@
 var updatePeriod = 1000; // 1 second
 
 var client = new XMLHttpRequest();
-client.onreadystatechange = updateReady;
 
 var detailsClient = new XMLHttpRequest();
-detailsClient.onreadystatechange = detailsUpdateReady;
 var detailsInFlight = undefined;
 
 var configuration = undefined;
@@ -51,6 +49,7 @@ function updateReady() {
         model.rebuild(tree, configuration);
     }
 };
+client.onreadystatechange = updateReady;
 
 Channel.prototype.getDetails = getChannel;
 Exchange.prototype.getDetails = getExchange;
@@ -100,6 +99,7 @@ function detailsUpdateReady() {
         }
     }
 };
+detailsClient.onreadystatechange = detailsUpdateReady;
 
 function repeatGetDetails() {
     if (undefined != hoveringOver) {

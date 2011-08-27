@@ -1,3 +1,5 @@
+/*global vec3 */
+
 var octtree = {};
 octtree.top_nw = 0;
 octtree.top_ne = 1;
@@ -8,26 +10,79 @@ octtree.bot_ne = 5;
 octtree.bot_se = 6;
 octtree.bot_sw = 7;
 octtree.children = [ octtree.top_nw, octtree.top_ne, octtree.top_se,
-        octtree.top_sw, octtree.bot_nw, octtree.bot_ne, octtree.bot_se,
-        octtree.bot_sw ];
+                     octtree.top_sw, octtree.bot_nw, octtree.bot_ne, octtree.bot_se,
+                     octtree.bot_sw ];
 octtree.firstChildId = 0;
 octtree.lastChildId = 7;
 octtree.x = 0;
 octtree.y = 1;
 octtree.z = 2;
-octtree.randoms = new Array();
+octtree.randoms = [];
 octtree.randomIndex = 0;
+octtree.i = 0;
 
-for ( var i = 0; i < 100; ++i) {
+for (octtree.i = 0; octtree.i < 100; octtree.i += 1) {
     octtree.randoms.push(Math.random());
+}
+
+function Octtree(xMin, xMax, yMin, yMax, zMin, zMax, parent, childId) {
+    this.xMin = xMin;
+    this.xMax = xMax;
+    this.yMin = yMin;
+    this.yMax = yMax;
+    this.zMin = zMin;
+    this.zMax = zMax;
+    this.parent = parent;
+    this.childId = childId;
+    if (undefined !== childId && childId !== octtree.lastChildId &&
+        undefined !== parent) {
+        this.nextSiblingId = childId + 1;
+    }
+
+    this.xMid = xMin + (xMax - xMin) / 2;
+    this.yMid = yMin + (yMax - yMin) / 2;
+    this.zMid = zMin + (zMax - zMin) / 2;
+}
+
+Octtree.prototype.isEmpty = function () {
+    return (undefined === this[octtree.firstChildId]) &&
+        (undefined === this.value);
 };
 
-octtree.findNode = function(tree, pos) {
+Octtree.prototype.hasChildren = function () {
+    return undefined !== this[octtree.firstChildId];
+};
+
+Octtree.prototype.hasValue = function () {
+    return undefined !== this.value;
+};
+
+Octtree.prototype.add = function (value) {
+    return octtree.add(this, value);
+};
+
+Octtree.prototype.del = function (value) {
+    return octtree.del(this, value);
+};
+
+Octtree.prototype.update = function () {
+    return octtree.update(this);
+};
+
+Octtree.prototype.findInRadius = function (pos, radius, limit) {
+    return octtree.findInRadius(this, pos, radius, limit);
+};
+
+Octtree.prototype.size = function () {
+    return octtree.size(this);
+};
+
+octtree.findNode = function (tree, pos) {
     while (true) {
-        if (pos[octtree.x] < tree.xMin || tree.xMax <= pos[octtree.x]
-                || pos[octtree.y] < tree.yMin || tree.yMax <= pos[octtree.y]
-                || pos[octtree.z] < tree.zMin || tree.zMax <= pos[octtree.z]) {
-            if (undefined == tree.parent) {
+        if (pos[octtree.x] < tree.xMin || tree.xMax <= pos[octtree.x] ||
+            pos[octtree.y] < tree.yMin || tree.yMax <= pos[octtree.y] ||
+            pos[octtree.z] < tree.zMin || tree.zMax <= pos[octtree.z]) {
+            if (undefined === tree.parent) {
                 return undefined;
             } else {
                 tree = tree.parent;
@@ -71,17 +126,17 @@ octtree.findNode = function(tree, pos) {
     }
 };
 
-octtree.add = function(tree, value) {
+octtree.add = function (tree, value) {
     tree = octtree.findNode(tree, value.pos);
-    if (undefined == tree) {
+    if (undefined === tree) {
         return undefined;
     } else {
-        var displaced = undefined;
-        while (undefined != value) {
+        var displaced;
+        while (undefined !== value) {
             if (tree.hasValue()) {
-                if (tree.value.pos[octtree.x] == value.pos[octtree.x]
-                        && tree.value.pos[octtree.y] == value.pos[octtree.y]
-                        && tree.value.pos[octtree.z] == value.pos[octtree.z]) {
+                if (tree.value.pos[octtree.x] === value.pos[octtree.x] &&
+                    tree.value.pos[octtree.y] === value.pos[octtree.y] &&
+                    tree.value.pos[octtree.z] === value.pos[octtree.z]) {
                     tree.value = value;
                     value = undefined;
                 } else {
@@ -90,37 +145,37 @@ octtree.add = function(tree, value) {
                     tree.value = undefined;
 
                     tree[octtree.top_nw] = new Octtree(tree.xMin, tree.xMid,
-                            tree.yMid, tree.yMax, tree.zMid, tree.zMax, tree,
-                            octtree.top_nw);
+                                                       tree.yMid, tree.yMax, tree.zMid, tree.zMax, tree,
+                                                       octtree.top_nw);
                     tree[octtree.top_ne] = new Octtree(tree.xMid, tree.xMax,
-                            tree.yMid, tree.yMax, tree.zMid, tree.zMax, tree,
-                            octtree.top_ne);
+                                                       tree.yMid, tree.yMax, tree.zMid, tree.zMax, tree,
+                                                       octtree.top_ne);
                     tree[octtree.top_se] = new Octtree(tree.xMid, tree.xMax,
-                            tree.yMid, tree.yMax, tree.zMin, tree.zMid, tree,
-                            octtree.top_se);
+                                                       tree.yMid, tree.yMax, tree.zMin, tree.zMid, tree,
+                                                       octtree.top_se);
                     tree[octtree.top_sw] = new Octtree(tree.xMin, tree.xMid,
-                            tree.yMid, tree.yMax, tree.zMin, tree.zMid, tree,
-                            octtree.top_sw);
+                                                       tree.yMid, tree.yMax, tree.zMin, tree.zMid, tree,
+                                                       octtree.top_sw);
 
                     tree[octtree.bot_nw] = new Octtree(tree.xMin, tree.xMid,
-                            tree.yMin, tree.yMid, tree.zMid, tree.zMax, tree,
-                            octtree.bot_nw);
+                                                       tree.yMin, tree.yMid, tree.zMid, tree.zMax, tree,
+                                                       octtree.bot_nw);
                     tree[octtree.bot_ne] = new Octtree(tree.xMid, tree.xMax,
-                            tree.yMin, tree.yMid, tree.zMid, tree.zMax, tree,
-                            octtree.bot_ne);
+                                                       tree.yMin, tree.yMid, tree.zMid, tree.zMax, tree,
+                                                       octtree.bot_ne);
                     tree[octtree.bot_se] = new Octtree(tree.xMid, tree.xMax,
-                            tree.yMin, tree.yMid, tree.zMin, tree.zMid, tree,
-                            octtree.bot_se);
+                                                       tree.yMin, tree.yMid, tree.zMin, tree.zMid, tree,
+                                                       octtree.bot_se);
                     tree[octtree.bot_sw] = new Octtree(tree.xMin, tree.xMid,
-                            tree.yMin, tree.yMid, tree.zMin, tree.zMid, tree,
-                            octtree.bot_sw);
+                                                       tree.yMin, tree.yMid, tree.zMin, tree.zMid, tree,
+                                                       octtree.bot_sw);
                     tree = octtree.findNode(tree, value.pos);
                 }
             } else {
                 tree.value = value;
                 value = displaced;
                 displaced = undefined;
-                if (undefined != value) {
+                if (undefined !== value) {
                     tree = octtree.findNode(tree, value.pos);
                 }
             }
@@ -129,37 +184,35 @@ octtree.add = function(tree, value) {
     }
 };
 
-octtree.del = function(tree, value) {
+octtree.del = function (tree, value) {
     tree = octtree.findNode(tree, value.pos);
-    if (undefined == tree || (!tree.hasValue())) {
+    if (undefined === tree || (!tree.hasValue())) {
         return tree;
     }
-    if (tree.value.pos[octtree.x] == value.pos[octtree.x]
-            && tree.value.pos[octtree.y] == value.pos[octtree.y]
-            && tree.value.pos[octtree.z] == value.pos[octtree.z]) {
+    if (tree.value.pos[octtree.x] === value.pos[octtree.x] &&
+        tree.value.pos[octtree.y] === value.pos[octtree.y] &&
+        tree.value.pos[octtree.z] === value.pos[octtree.z]) {
         tree.value = undefined;
         tree = tree.parent;
-        var valCount;
-        var nonEmptyChild = undefined;
-        var child;
-        while (undefined != tree) {
+        var valCount, nonEmptyChild, child, i;
+        while (undefined !== tree) {
             valCount = 0;
-            for ( var i = 0; i < octtree.children.length; ++i) {
+            for (i = 0; i < octtree.children.length; i += 1) {
                 child = octtree.children[i];
                 if (!tree[child].isEmpty()) {
-                    valCount++;
+                    valCount += 1;
                     nonEmptyChild = tree[child];
                 }
             }
-            if (0 == valCount) {
-                for ( var i = 0; i < octtree.children.length; ++i) {
+            if (0 === valCount) {
+                for (i = 0; i < octtree.children.length; i += 1) {
                     child = octtree.children[i];
                     tree[child] = undefined;
                 }
                 tree = tree.parent;
-            } else if (1 == valCount) {
+            } else if (1 === valCount) {
                 if (nonEmptyChild.hasValue()) {
-                    for ( var i = 0; i < octtree.children.length; ++i) {
+                    for (i = 0; i < octtree.children.length; i += 1) {
                         child = octtree.children[i];
                         tree[child] = undefined;
                     }
@@ -176,9 +229,9 @@ octtree.del = function(tree, value) {
     return tree;
 };
 
-octtree.next = function(tree) {
-    while (undefined != tree) {
-        if (undefined != tree.nextSiblingId) {
+octtree.next = function (tree) {
+    while (undefined !== tree) {
+        if (undefined !== tree.nextSiblingId) {
             return tree.parent[tree.nextSiblingId];
         } else {
             tree = tree.parent;
@@ -187,30 +240,30 @@ octtree.next = function(tree) {
     return undefined;
 };
 
-octtree.defined = function(a, b) {
-    if (undefined == a) {
+octtree.defined = function (a, b) {
+    if (undefined === a) {
         return b;
     } else {
         return a;
     }
 };
 
-octtree.update = function(tree) {
-    var root = tree;
-    var parent = root.parent;
+octtree.update = function (tree) {
+    var root, parent, v, movedValues, i;
+    root = tree;
+    parent = root.parent;
     root.parent = undefined; // do this to stop next going up past tree
 
-    var v = undefined;
-    var movedValues = new Array();
-    while (undefined != tree) {
+    movedValues = [];
+    while (undefined !== tree) {
         if (tree.hasValue()) {
             v = tree.value;
-            if (v.next_pos[octtree.x] < tree.xMin
-                    || tree.xMax <= v.next_pos[octtree.x]
-                    || v.next_pos[octtree.y] < tree.yMin
-                    || tree.yMax <= v.next_pos[octtree.y]
-                    || v.next_pos[octtree.z] < tree.zMin
-                    || tree.zMax <= v.next_pos[octtree.z]) {
+            if (v.next_pos[octtree.x] < tree.xMin ||
+                tree.xMax <= v.next_pos[octtree.x] ||
+                v.next_pos[octtree.y] < tree.yMin ||
+                tree.yMax <= v.next_pos[octtree.y] ||
+                v.next_pos[octtree.z] < tree.zMin ||
+                tree.zMax <= v.next_pos[octtree.z]) {
                 movedValues.push(tree.value);
             } else {
                 vec3.set(v.next_pos, v.pos);
@@ -225,32 +278,31 @@ octtree.update = function(tree) {
 
     root.parent = parent;
     tree = root;
-    for ( var i = 0; i < movedValues.length; ++i) {
+    for (i = 0; i < movedValues.length; i += 1) {
         v = movedValues[i];
         tree = octtree.defined(tree.del(v), tree);
-        // root.del(v);
         vec3.set(v.next_pos, v.pos);
-        // root.add(v);
         tree = octtree.defined(tree.add(v), tree);
     }
 
     return root;
 };
 
-octtree.findInRadius = function(tree, pos, radius, limit) {
-    var acc = new Array();
-    var radiusSq = radius * radius;
-    var worklist = new Array(tree);
+octtree.findInRadius = function (tree, pos, radius, limit) {
+    var acc, radiusSq, worklist, x_p_r, x_m_r, y_p_r, y_m_r, z_p_r, z_m_r, xd, yd, zd;
+    acc = [];
+    radiusSq = radius * radius;
+    worklist = [tree];
     tree = undefined;
 
-    var x_p_r = 0;
-    var x_m_r = 0;
-    var y_p_r = 0;
-    var y_m_r = 0;
-    var z_p_r = 0;
-    var z_m_r = 0;
+    x_p_r = 0;
+    x_m_r = 0;
+    y_p_r = 0;
+    y_m_r = 0;
+    z_p_r = 0;
+    z_m_r = 0;
 
-    while (0 < worklist.length && (undefined == limit || limit > acc.length)) {
+    while (0 < worklist.length && (undefined === limit || limit > acc.length)) {
         tree = worklist.shift();
 
         if (tree.isEmpty()) {
@@ -258,9 +310,9 @@ octtree.findInRadius = function(tree, pos, radius, limit) {
         }
 
         if (tree.hasValue()) {
-            var xd = Math.abs(tree.value.pos[octtree.x] - pos[octtree.x]);
-            var yd = Math.abs(tree.value.pos[octtree.y] - pos[octtree.y]);
-            var zd = Math.abs(tree.value.pos[octtree.z] - pos[octtree.z]);
+            xd = Math.abs(tree.value.pos[octtree.x] - pos[octtree.x]);
+            yd = Math.abs(tree.value.pos[octtree.y] - pos[octtree.y]);
+            zd = Math.abs(tree.value.pos[octtree.z] - pos[octtree.z]);
             xd *= xd;
             yd *= yd;
             zd *= zd;
@@ -277,9 +329,8 @@ octtree.findInRadius = function(tree, pos, radius, limit) {
         z_p_r = pos[octtree.z] + radius;
         z_m_r = pos[octtree.z] - radius;
 
-        if (x_p_r < tree.xMin || tree.xMax <= x_m_r || y_p_r < tree.yMin
-                || tree.yMax <= y_m_r || z_p_r < tree.zMin
-                || tree.zMax <= z_m_r) {
+        if (x_p_r < tree.xMin || tree.xMax <= x_m_r || y_p_r < tree.yMin ||
+            tree.yMax <= y_m_r || z_p_r < tree.zMin || tree.zMax <= z_m_r) {
             continue;
         }
 
@@ -323,15 +374,16 @@ octtree.findInRadius = function(tree, pos, radius, limit) {
     return acc;
 };
 
-octtree.size = function(tree) {
-    var count = 0;
-    var root = tree;
-    var parent = root.parent;
+octtree.size = function (tree) {
+    var count, root, parent;
+    root = 0;
+    root = tree;
+    parent = root.parent;
     root.parent = undefined; // stop the traversal going above us.
 
-    while (undefined != tree) {
+    while (undefined !== tree) {
         if (tree.hasValue()) {
-            count++;
+            count += 1;
             tree = octtree.next(tree);
         } else if (tree.hasChildren()) {
             tree = tree[octtree.firstChildId];
@@ -344,11 +396,11 @@ octtree.size = function(tree) {
     return count;
 };
 
-octtree.create = function(xMin, xMax, yMin, yMax, zMin, zMax) {
+octtree.create = function (xMin, xMax, yMin, yMax, zMin, zMax) {
     return new Octtree(xMin, xMax, yMin, yMax, zMin, zMax, undefined, undefined);
 };
 
-octtree.randomPush = function(ary, e) {
+octtree.randomPush = function (ary, e) {
     if (octtree.nextRandom() > 0.5) {
         ary.push(e);
     } else {
@@ -357,63 +409,11 @@ octtree.randomPush = function(ary, e) {
     return ary;
 };
 
-octtree.nextRandom = function() {
+octtree.nextRandom = function () {
     var r = octtree.randoms[octtree.randomIndex];
-    octtree.randomIndex++;
-    if (octtree.randomIndex == octtree.randoms.length) {
+    octtree.randomIndex += 1;
+    if (octtree.randomIndex === octtree.randoms.length) {
         octtree.randomIndex = 0;
     }
     return r;
-};
-
-function Octtree(xMin, xMax, yMin, yMax, zMin, zMax, parent, childId) {
-    this.xMin = xMin;
-    this.xMax = xMax;
-    this.yMin = yMin;
-    this.yMax = yMax;
-    this.zMin = zMin;
-    this.zMax = zMax;
-    this.parent = parent;
-    this.childId = childId;
-    if (undefined != childId && childId != octtree.lastChildId
-            && undefined != parent) {
-        this.nextSiblingId = childId + 1;
-    }
-
-    this.xMid = xMin + (xMax - xMin) / 2;
-    this.yMid = yMin + (yMax - yMin) / 2;
-    this.zMid = zMin + (zMax - zMin) / 2;
-};
-
-Octtree.prototype.isEmpty = function() {
-    return (undefined == this[octtree.firstChildId])
-            && (undefined == this.value);
-};
-
-Octtree.prototype.hasChildren = function() {
-    return undefined != this[octtree.firstChildId];
-};
-
-Octtree.prototype.hasValue = function() {
-    return undefined != this.value;
-};
-
-Octtree.prototype.add = function(value) {
-    return octtree.add(this, value);
-};
-
-Octtree.prototype.del = function(value) {
-    return octtree.del(this, value);
-};
-
-Octtree.prototype.update = function() {
-    return octtree.update(this);
-};
-
-Octtree.prototype.findInRadius = function(pos, radius, limit) {
-    return octtree.findInRadius(this, pos, radius, limit);
-};
-
-Octtree.prototype.size = function() {
-    return octtree.size(this);
 };
