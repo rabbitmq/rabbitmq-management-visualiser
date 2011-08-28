@@ -106,6 +106,7 @@ function setDetails(elem) {
     details = document.getElementById("details");
     if (undefined === elem) {
         details.innerHTML = "";
+        detailsInFlight = undefined;
     } else {
         strAtts = elem.stringAttributes();
         visibleRows = Math.floor(details.clientHeight / 16); // line-height + padding;
@@ -134,6 +135,7 @@ function detailsUpdateReady() {
     if (detailsClient.readyState === 4 &&
         detailsClient.status === 200 &&
         undefined !== hoveringOver &&
+        undefined !== detailsInFlight &&
         hoveringOver.object_type === detailsInFlight.object_type &&
         hoveringOver.name === detailsInFlight.name) {
         try {
@@ -275,12 +277,8 @@ function initCanvas(canvas) {
             hoveringOver = undefined;
             dragging = undefined;
         } else {
-            if (undefined === hoveringOver) {
-                setDetails(undefined);
-            } else {
-                mouseDown = true;
-                mouseDragOffsetVec = undefined;
-            }
+            mouseDown = true;
+            mouseDragOffsetVec = undefined;
         }
     };
     canvas.onmouseup = function (e) {
@@ -386,6 +384,9 @@ function draggable(model, ctx) {
         } else if (!inPath) {
             if (undefined !== hoveringOver) {
                 hoveringOver.details = undefined;
+            }
+            if (detailsInFlight === this) {
+                setDetails(undefined);
             }
             dragging = undefined;
             hoveringOver = undefined;
@@ -514,6 +515,9 @@ Queue.prototype.enable = enable_fun('queue', Queue.prototype.enable);
 
 function disable_fun(hiddenElemId, type, postFun) {
     return function (model) {
+        if (detailsInFlight === this) {
+            setDetails(undefined);
+        }
         var optionElem = document.createElement('option');
         optionElem.text = '"' + this.name + '"';
         if (undefined !== model.rendering[type].on_enable[this.name]) {
