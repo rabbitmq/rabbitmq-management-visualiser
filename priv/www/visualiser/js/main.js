@@ -1,4 +1,4 @@
-/*global octtree, vec3, Model, Channel, Exchange, Queue, Binding, Newton, Spring, window */
+/*global octtree, vec3, Model, Channel, Exchange, Queue, Binding, Newton, Spring */
 /*jslint browser: true, devel: true */
 
 var tree = octtree.create(0, 10000, 0, 1000000, -0.5, 2);
@@ -157,11 +157,11 @@ detailsClient.onreadystatechange = detailsUpdateReady;
  ******************************************************************************/
 
 var requestAnimFrame = (function () {
-    return (window.requestAnimationFrame ||
-            window.webkitRequestAnimationFrame ||
-            window.mozRequestAnimationFrame ||
-            window.oRequestAnimationFrame ||
-            window.msRequestAnimationFrame ||
+    return (this.requestAnimationFrame ||
+            this.webkitRequestAnimationFrame ||
+            this.mozRequestAnimationFrame ||
+            this.oRequestAnimationFrame ||
+            this.msRequestAnimationFrame ||
             function (/* function FrameRequestCallback */ callback, /* DOMElement Element */ element) {
                 setTimeout(callback, 1000 / 60);
             });
