@@ -9,7 +9,6 @@ var configuration, detailsInFlight, mouseDragOffsetVec, hoveringOver, dragging, 
 var client = new XMLHttpRequest();
 
 var detailsClient = new XMLHttpRequest();
-var detailsInFlight;
 
 var model = new Model();
 var mousePos = vec3.create();
@@ -41,6 +40,11 @@ var scrollLeft = 0;
 var scrollTop = 0;
 var clientWidth = 0;
 var clientHeight = 0;
+
+
+/******************************************************************************
+ * Fetching details from the broker                                           *
+ ******************************************************************************/
 
 function update() {
     if (undefined === selectedVhost) {
@@ -147,6 +151,90 @@ function detailsUpdateReady() {
 }
 detailsClient.onreadystatechange = detailsUpdateReady;
 
+
+/******************************************************************************
+ * Rendering / animation                                                      *
+ ******************************************************************************/
+
+var requestAnimFrame = (function () {
+    return (window.requestAnimationFrame ||
+            window.webkitRequestAnimationFrame ||
+            window.mozRequestAnimationFrame ||
+            window.oRequestAnimationFrame ||
+            window.msRequestAnimationFrame ||
+            function (/* function FrameRequestCallback */ callback, /* DOMElement Element */ element) {
+                setTimeout(callback, 1000 / 60);
+            });
+})();
+
+// Used to start/stop doing work when we gain/lose focus
+function enableRendering() {
+    lastTime = 0;
+    rendering = true;
+}
+
+function disableRendering() {
+    rendering = false;
+}
+
+function mouseMove(e) {
+    var x, y;
+    x = e.pageX;
+    y = e.pageY;
+    x = (x - canvasLeft) + scrollLeft;
+    y = (y - canvasTop) + scrollTop;
+    mousePos[octtree.x] = x;
+    mousePos[octtree.y] = y;
+}
+
+function resizeCanvas() {
+    var e;
+    if (undefined !== canvas) {
+        canvas.width = canvas.parentNode.offsetWidth;
+        canvas.height = canvas.parentNode.offsetHeight;
+        Channel.prototype.canvasResized(canvas);
+        Exchange.prototype.canvasResized(canvas);
+        Queue.prototype.canvasResized(canvas);
+        clientWidth = canvas.width;
+        clientHeight = canvas.height;
+        e = canvas.parentNode;
+        while (undefined !== e && null !== e) {
+            if (undefined !== e.clientHeight && undefined !== e.clientWidth &&
+                e.clientHeight > 0 && e.clientWidth > 0) {
+                clientHeight = Math.min(clientHeight, e.clientHeight);
+                clientWidth = Math.min(clientWidth, e.clientWidth);
+            }
+            e = e.parentNode;
+        }
+        canvasLeft = 0;
+        canvasTop = 0;
+        e = canvas.parentNode;
+        while (undefined !== e && null !== e) {
+            if (undefined !== e.offsetLeft && undefined !== e.offsetTop) {
+                canvasLeft += e.offsetLeft;
+                canvasTop += e.offsetTop;
+            }
+            e = e.parentNode;
+        }
+        if (undefined !== hoveringOver && undefined !== hoveringOver.details) {
+            setDetails(hoveringOver);
+        }
+    }
+}
+
+function canvasScroll() {
+    scrollLeft = 0;
+    scrollTop = 0;
+    var e = canvas.parentNode;
+    while (undefined !== e && null !== e) {
+        if (undefined !== e.scrollLeft && undefined !== e.scrollTop) {
+            scrollLeft += e.scrollLeft;
+            scrollTop += e.scrollTop;
+        }
+        e = e.parentNode;
+    }
+}
+
 function clamp(elem) {
     var x_vel_abs, y_vel_abs;
     x_vel_abs = Math.abs(elem.velocity[octtree.x]);
@@ -176,6 +264,103 @@ function clamp(elem) {
         canvas.height += 100;
     }
 }
+
+function initCanvas(canvas) {
+    resizeCanvas();
+    canvas.onmousemove = mouseMove;
+    canvas.onmousedown = function (e) {
+        if (e.shiftKey && undefined !== hoveringOver) {
+            model.disable(hoveringOver, tree);
+            mouseDown = false;
+            hoveringOver = undefined;
+            dragging = undefined;
+        } else {
+            if (undefined === hoveringOver) {
+                setDetails(undefined);
+            } else {
+                mouseDown = true;
+                mouseDragOffsetVec = undefined;
+            }
+        }
+    };
+    canvas.onmouseup = function (e) {
+        mouseDown = false;
+        mouseDragOffsetVec = undefined;
+        dragging = undefined;
+    };
+    try {
+        ctx = canvas.getContext("2d");
+    } catch (e) {
+    }
+    if (!ctx) {
+        alert("Could not initialise 2D canvas. Change browser?");
+    }
+}
+
+function drawScene() {
+    ctx.font = "" + fontSize + "px sans-serif";
+    ctx.clearRect(scrollLeft, scrollTop, clientWidth, clientHeight);
+    ctx.lineWidth = 1.0;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = "black";
+    model.render(ctx);
+}
+
+function animate() {
+    var timeNow, elapsed, e, i;
+    timeNow = new Date().getTime();
+    if (lastTime !== 0 && rendering) {
+        elapsed = (timeNow - lastTime) / 10000;
+        for (i in model.exchange) {
+            e = model.exchange[i];
+            if ((undefined === dragging || dragging !== e) && ! e.disabled) {
+                e.animate(elapsed);
+                newton.update(elapsed, e);
+                spring.update(elapsed, tree, e);
+                clamp(e);
+            }
+        }
+        for (i in model.channel) {
+            e = model.channel[i];
+            if ((undefined === dragging || dragging !== e) && ! e.disabled) {
+                e.animate(elapsed);
+                newton.update(elapsed, e);
+                spring.update(elapsed, tree, e);
+                clamp(e);
+            }
+        }
+        for (i in model.queue) {
+            e = model.queue[i];
+            if ((undefined === dragging || dragging !== e) && ! e.disabled) {
+                e.animate(elapsed);
+                newton.update(elapsed, e);
+                spring.update(elapsed, tree, e);
+                clamp(e);
+            }
+        }
+        tree.update();
+    }
+    lastTime = timeNow;
+}
+
+function tick() {
+    drawScene();
+    animate();
+    requestAnimFrame(tick);
+}
+
+function visualisationStart() {
+    canvas = document.getElementById("topology_canvas");
+    initCanvas(canvas);
+    update();
+    tick();
+}
+
+
+/******************************************************************************
+ * Model callbacks for rendering                                              *
+ ******************************************************************************/
 
 function draggable(model, ctx) {
     var inPath = ctx.isPointInPath(mousePos[octtree.x], mousePos[octtree.y]);
@@ -259,174 +444,29 @@ Binding.prototype.preStroke = function (source, destination, model, ctx) {
     }
 };
 
-var requestAnimFrame = (function () {
-    return (window.requestAnimationFrame ||
-            window.webkitRequestAnimationFrame ||
-            window.mozRequestAnimationFrame ||
-            window.oRequestAnimationFrame ||
-            window.msRequestAnimationFrame ||
-            function (/* function FrameRequestCallback */ callback, /* DOMElement Element */ element) {
-                setTimeout(callback, 1000 / 60);
-            });
-})();
-
-function mouseMove(e) {
-    var x, y;
-    x = e.pageX;
-    y = e.pageY;
-    x = (x - canvasLeft) + scrollLeft;
-    y = (y - canvasTop) + scrollTop;
-    mousePos[octtree.x] = x;
-    mousePos[octtree.y] = y;
+function frustumCull(xMin, yMin, width, height) {
+    return ((yMin > (scrollTop + clientHeight)) ||
+            ((yMin + height) < scrollTop) ||
+            (xMin > (scrollLeft + clientWidth)) ||
+            ((xMin + width) < scrollLeft));
 }
+Model.prototype.cull = frustumCull;
 
-function resizeCanvas() {
-    var e;
-    if (undefined !== canvas) {
-        canvas.width = canvas.parentNode.offsetWidth;
-        canvas.height = canvas.parentNode.offsetHeight;
-        Channel.prototype.canvasResized(canvas);
-        Exchange.prototype.canvasResized(canvas);
-        Queue.prototype.canvasResized(canvas);
-        clientWidth = canvas.width;
-        clientHeight = canvas.height;
-        e = canvas.parentNode;
-        while (undefined !== e && null !== e) {
-            if (undefined !== e.clientHeight && undefined !== e.clientWidth &&
-                e.clientHeight > 0 && e.clientWidth > 0) {
-                clientHeight = Math.min(clientHeight, e.clientHeight);
-                clientWidth = Math.min(clientWidth, e.clientWidth);
-            }
-            e = e.parentNode;
-        }
-        canvasLeft = 0;
-        canvasTop = 0;
-        e = canvas.parentNode;
-        while (undefined !== e && null !== e) {
-            if (undefined !== e.offsetLeft && undefined !== e.offsetTop) {
-                canvasLeft += e.offsetLeft;
-                canvasTop += e.offsetTop;
-            }
-            e = e.parentNode;
-        }
-        if (undefined !== hoveringOver && undefined !== hoveringOver.details) {
-            setDetails(hoveringOver);
+
+/******************************************************************************
+ * Showing / hiding / removing resources                                      *
+ ******************************************************************************/
+
+function selectInsertAlphabetical(selectElem, optionElem) {
+    var preceding, i;
+    for (i = 0; i < selectElem.options.length; i += 1) {
+        if (optionElem.text < selectElem.options[i].text) {
+            preceding = selectElem.options[i];
+            break;
         }
     }
-}
-
-function canvasScroll() {
-    scrollLeft = 0;
-    scrollTop = 0;
-    var e = canvas.parentNode;
-    while (undefined !== e && null !== e) {
-        if (undefined !== e.scrollLeft && undefined !== e.scrollTop) {
-            scrollLeft += e.scrollLeft;
-            scrollTop += e.scrollTop;
-        }
-        e = e.parentNode;
-    }
-}
-
-function initCanvas(canvas) {
-    resizeCanvas();
-    canvas.onmousemove = mouseMove;
-    canvas.onmousedown = function (e) {
-        if (e.shiftKey && undefined !== hoveringOver) {
-            model.disable(hoveringOver, tree);
-            mouseDown = false;
-            hoveringOver = undefined;
-            dragging = undefined;
-        } else {
-            if (undefined === hoveringOver) {
-                setDetails(undefined);
-            } else {
-                mouseDown = true;
-                mouseDragOffsetVec = undefined;
-            }
-        }
-    };
-    canvas.onmouseup = function (e) {
-        mouseDown = false;
-        mouseDragOffsetVec = undefined;
-        dragging = undefined;
-    };
-    try {
-        ctx = canvas.getContext("2d");
-    } catch (e) {
-    }
-    if (!ctx) {
-        alert("Could not initialise 2D canvas. Change browser?");
-    }
-}
-
-function drawScene() {
-    ctx.font = "" + fontSize + "px sans-serif";
-    ctx.clearRect(scrollLeft, scrollTop, clientWidth, clientHeight);
-    ctx.lineWidth = 1.0;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.strokeStyle = "black";
-    model.render(ctx);
-}
-
-function enableRendering() {
-    lastTime = 0;
-    rendering = true;
-}
-
-function disableRendering() {
-    rendering = false;
-}
-
-function animate() {
-    var timeNow, elapsed, e, i;
-    timeNow = new Date().getTime();
-    if (lastTime !== 0 && rendering) {
-        elapsed = (timeNow - lastTime) / 10000;
-        for (i in model.exchange) {
-            e = model.exchange[i];
-            if ((undefined === dragging || dragging !== e) && ! e.disabled) {
-                e.animate(elapsed);
-                newton.update(elapsed, e);
-                spring.update(elapsed, tree, e);
-                clamp(e);
-            }
-        }
-        for (i in model.channel) {
-            e = model.channel[i];
-            if ((undefined === dragging || dragging !== e) && ! e.disabled) {
-                e.animate(elapsed);
-                newton.update(elapsed, e);
-                spring.update(elapsed, tree, e);
-                clamp(e);
-            }
-        }
-        for (i in model.queue) {
-            e = model.queue[i];
-            if ((undefined === dragging || dragging !== e) && ! e.disabled) {
-                e.animate(elapsed);
-                newton.update(elapsed, e);
-                spring.update(elapsed, tree, e);
-                clamp(e);
-            }
-        }
-        tree.update();
-    }
-    lastTime = timeNow;
-}
-
-function tick() {
-    drawScene();
-    animate();
-    requestAnimFrame(tick);
-}
-
-function visualisationStart() {
-    canvas = document.getElementById("topology_canvas");
-    initCanvas(canvas);
-    update();
-    tick();
+    selectElem.add(optionElem, preceding);
+    return selectElem.options;
 }
 
 function show(hiddenElemId, model, type) {
@@ -456,17 +496,63 @@ function showQueues() {
     show("hidden_queues", model, 'queue');
 }
 
-function selectInsertAlphabetical(selectElem, optionElem) {
-    var preceding, i;
-    for (i = 0; i < selectElem.options.length; i += 1) {
-        if (optionElem.text < selectElem.options[i].text) {
-            preceding = selectElem.options[i];
-            break;
+// Called when the resource is enabled from being hidden
+function enable_fun(type, postFun) {
+    return function (model) {
+        if (model.rendering[type].enabled) {
+            delete model.rendering[type].on_enable[this.name];
         }
-    }
-    selectElem.add(optionElem, preceding);
-    return selectElem.options;
+        this.remove = this.__proto__.remove;
+        this.postFun = postFun;
+        this.postFun(model);
+    };
 }
+
+Channel.prototype.enable = enable_fun('channel', Channel.prototype.enable);
+Exchange.prototype.enable = enable_fun('exchange', Exchange.prototype.enable);
+Queue.prototype.enable = enable_fun('queue', Queue.prototype.enable);
+
+function disable_fun(hiddenElemId, type, postFun) {
+    return function (model) {
+        var optionElem = document.createElement('option');
+        optionElem.text = '"' + this.name + '"';
+        if (undefined !== model.rendering[type].on_enable[this.name]) {
+            optionElem.text += ' *';
+        }
+        optionElem.value = this.name;
+        selectInsertAlphabetical(document.getElementById(hiddenElemId), optionElem);
+        this.remove = remove_disabled_fun(hiddenElemId, this.remove);
+        this.postFun = postFun;
+        this.postFun(model);
+    };
+}
+
+Channel.prototype.disable =
+    disable_fun("hidden_channels", 'channel', Channel.prototype.disable);
+Exchange.prototype.disable =
+    disable_fun("hidden_exchanges", 'exchange', Exchange.prototype.disable);
+Queue.prototype.disable =
+    disable_fun("hidden_queues", 'queue', Queue.prototype.disable);
+
+// Called when the resource is deleted / vanishes on the broker
+function remove_fun(postFun, type) {
+    return function (tree, model) {
+        if (undefined !== hoveringOver && this === hoveringOver) {
+            hoveringOver = undefined;
+            dragging = undefined;
+        }
+        delete model.rendering[type].on_enable[this.name];
+        if (this === detailsInFlight) {
+            setDetails(undefined);
+        }
+        this.postFun = postFun;
+        this.postFun(tree, model);
+    };
+}
+
+Channel.prototype.remove = remove_fun(Channel.prototype.remove, 'channel');
+Queue.prototype.remove = remove_fun(Queue.prototype.remove, 'queue');
+Exchange.prototype.remove = remove_fun(Exchange.prototype.remove, 'exchange');
 
 // Called when the item is removed and the item is disabled
 function remove_disabled_fun(hiddenElemId, postFun) {
@@ -484,68 +570,6 @@ function remove_disabled_fun(hiddenElemId, postFun) {
         this.postFun(tree, model);
     };
 }
-
-function disable_fun(hiddenElemId, type, postFun) {
-    return function (model) {
-        var optionElem = document.createElement('option');
-        optionElem.text = '"' + this.name + '"';
-        if (undefined !== model.rendering[type].on_enable[this.name]) {
-            optionElem.text += ' *';
-        }
-        optionElem.value = this.name;
-        selectInsertAlphabetical(document.getElementById(hiddenElemId), optionElem);
-        this.remove = remove_disabled_fun(hiddenElemId, this.remove);
-        this.postFun = postFun;
-        this.postFun(model);
-    };
-}
-
-function frustumCull(xMin, yMin, width, height) {
-    return ((yMin > (scrollTop + clientHeight)) ||
-            ((yMin + height) < scrollTop) ||
-            (xMin > (scrollLeft + clientWidth)) ||
-            ((xMin + width) < scrollLeft));
-}
-Model.prototype.cull = frustumCull;
-
-function enable_fun(type, postFun) {
-    return function (model) {
-        if (model.rendering[type].enabled) {
-            delete model.rendering[type].on_enable[this.name];
-        }
-        this.remove = this.__proto__.remove;
-        this.postFun = postFun;
-        this.postFun(model);
-    };
-}
-
-Channel.prototype.disable =
-    disable_fun("hidden_channels", 'channel', Channel.prototype.disable);
-Exchange.prototype.disable =
-    disable_fun("hidden_exchanges", 'exchange', Exchange.prototype.disable);
-Queue.prototype.disable =
-    disable_fun("hidden_queues", 'queue', Queue.prototype.disable);
-
-Channel.prototype.enable = enable_fun('channel', Channel.prototype.enable);
-Exchange.prototype.enable = enable_fun('exchange', Exchange.prototype.enable);
-Queue.prototype.enable = enable_fun('queue', Queue.prototype.enable);
-
-
-function remove_fun(postFun, type) {
-    return function (tree, model) {
-        if (undefined !== hoveringOver && this === hoveringOver) {
-            hoveringOver = undefined;
-            dragging = undefined;
-        }
-        delete model.rendering[type].on_enable[this.name];
-        this.postFun = postFun;
-        this.postFun(tree, model);
-    };
-}
-
-Channel.prototype.remove = remove_fun(Channel.prototype.remove, 'channel');
-Queue.prototype.remove = remove_fun(Queue.prototype.remove, 'queue');
-Exchange.prototype.remove = remove_fun(Exchange.prototype.remove, 'exchange');
 
 function toggleRendering(hiddenElemId, showButtonElemId, type) {
     var hidden, i, e;
@@ -572,6 +596,11 @@ function toggleRendering(hiddenElemId, showButtonElemId, type) {
     }
     return true;
 }
+
+
+/******************************************************************************
+ * VHost                                                                      *
+ ******************************************************************************/
 
 Model.prototype.vhost_add = function (vhost) {
     var optionElem, options;
