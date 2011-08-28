@@ -148,6 +148,7 @@ function detailsUpdateReady() {
             }
         } catch (err) {
             // We probably cancelled it as we were receiving data.
+            model[detailsInFlight.object_type][detailsInFlight.name].details = undefined;
         }
     }
 }
