@@ -425,7 +425,7 @@ Binding.prototype.preStroke = function (source, destination, model, ctx) {
 
     if (drawBindingKeys) {
         xMid = (source.xMax + destination.xMin) / 2;
-        yMid = source === destination ? source.pos[octtree.y] - this.loopOffset + 12
+        yMid = source === destination ? source.pos[octtree.y] - this.loopOffset + fontSize
             : (source.pos[octtree.y] + destination.pos[octtree.y]) / 2;
         bindingKey = "";
         for (k in this.keys) {
