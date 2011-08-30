@@ -45,6 +45,28 @@ function bezierMid(startX, startY, ctl1X, ctl1Y, ctl2X, ctl2Y, endX, endY) {
     return [(mid1X + mid2X) / 2, (mid1Y + mid2Y) / 2];
 }
 
+function stringifyObject(a) {
+    var b, e;
+    b = {};
+    for (e in a) {
+        if (a.hasOwnProperty(e)) {
+            if ("object" === typeof a[e]) {
+                b[e] = stringifyObject(a[e]);
+            } else {
+                b[e] = "" + a[e];
+            }
+        }
+    }
+    return b;
+}
+
+String.prototype.toTitleCase = function () {
+    return this.replace(/(^|_)([a-z])/g,
+                        function (str, g1, g2, offset, totalStr) {
+                            return g1.replace("_", " ") + g2.toUpperCase();
+                        });
+};
+
 var Consumer = {};
 Consumer.render = function (channel, queue, ctx, consumerTag) {
     var yMid, xCtl, dim, mid;
@@ -146,7 +168,8 @@ Channel.prototype = {
     fontSize : 12,
     spring : new Spring(),
     details : undefined,
-    object_type : 'channel'
+    object_type : 'channel',
+    detail_attributes : Channel.prototype.attributes
 };
 Channel.prototype.spring.octtreeLimit = 10;
 Channel.prototype.spring.octtreeRadius = 500;
@@ -262,7 +285,11 @@ Channel.prototype.stringAttributes = function () {
     obj = {};
     for (i in this.attributes) {
         attName = this.attributes[i];
-        obj[attName] = "" + this[attName];
+        if ("object" === typeof this[attName]) {
+            obj[attName] = stringifyObject(this[attName]);
+        } else {
+            obj[attName] = "" + this[attName];
+        }
     }
     return obj;
 };
@@ -300,7 +327,8 @@ Exchange.prototype = {
     fontSize : 12,
     spring : new Spring(),
     details : undefined,
-    object_type : 'exchange'
+    object_type : 'exchange',
+    detail_attributes : [ 'name', 'type', 'durable', 'auto_delete', 'internal', 'arguments', 'vhost' ]
 };
 Exchange.prototype.spring.octtreeLimit = 10;
 Exchange.prototype.spring.octtreeRadius = 500;
@@ -414,12 +442,40 @@ Exchange.prototype.enable = function (model) {
 Exchange.prototype.getDetails = function () {
 };
 Exchange.prototype.stringAttributes = function () {
-    var obj, i, attName;
-    obj = {};
-    for (i in this.attributes) {
-        attName = this.attributes[i];
-        obj[attName] = "" + this[attName];
+    var obj, i, attName, attNameTitle;
+    obj = { Exchange : '',
+            attributeOrder : ['Exchange'] };
+    for (i in this.detail_attributes) {
+        attName = this.detail_attributes[i];
+        attNameTitle = attName.toTitleCase();
+        obj.attributeOrder.push(attNameTitle);
+        if ("object" === typeof this[attName]) {
+            obj[attNameTitle] = stringifyObject(this[attName]);
+        } else {
+            obj[attNameTitle] = "" + this[attName];
+        }
     }
+
+    if (undefined !== this.message_stats_in &&
+        undefined !== this.message_stats_in.publish &&
+        undefined !== this.message_stats_in.publish_details) {
+        obj.attributeOrder.push('Message Incoming Rate (msgs/sec)');
+        obj['Message Incoming Rate (msgs/sec)'] = "" + this.message_stats_in.publish_details.rate;
+
+        obj.attributeOrder.push('Total messages received');
+        obj['Total messages received'] = "" + this.message_stats_in.publish;
+    }
+
+    if (undefined !== this.message_stats_out &&
+        undefined !== this.message_stats_out.publish &&
+        undefined !== this.message_stats_out.publish_details) {
+        obj.attributeOrder.push('Message Outgoing Rate (msgs/sec)');
+        obj['Message Outgoing Rate (msgs/sec)'] = "" + this.message_stats_out.publish_details.rate;
+
+        obj.attributeOrder.push('Total messages routed');
+        obj['Total messages routed'] = "" + this.message_stats_out.publish;
+    }
+
     return obj;
 };
 
@@ -456,7 +512,8 @@ Queue.prototype = {
     fontSize : 12,
     spring : new Spring(),
     details : undefined,
-    object_type : 'queue'
+    object_type : 'queue',
+    detail_attributes : Queue.prototype.attributes
 };
 Queue.prototype.spring.octtreeLimit = 10;
 Queue.prototype.spring.octtreeRadius = 500;
@@ -558,7 +615,11 @@ Queue.prototype.stringAttributes = function () {
     obj = {};
     for (i in this.attributes) {
         attName = this.attributes[i];
-        obj[attName] = "" + this[attName];
+        if ("object" === typeof this[attName]) {
+            obj[attName] = stringifyObject(this[attName]);
+        } else {
+            obj[attName] = "" + this[attName];
+        }
     }
     return obj;
 };

@@ -1,4 +1,4 @@
-/*global octtree, vec3, Model, Channel, Exchange, Queue, Binding, Newton, Spring */
+/*global octtree, vec3, Model, Channel, Exchange, Queue, Binding, Newton, Spring, window */
 /*jslint browser: true, devel: true */
 
 var tree = octtree.create(0, 10000, 0, 1000000, -0.5, 2);
@@ -101,6 +101,21 @@ function repeatGetDetails() {
     }
 }
 
+function flattenAtts(a) {
+    if ("string" === typeof a) {
+        return a;
+    } else {
+        var str, e;
+        str = "{";
+        for (e in a) {
+            if (a.hasOwnProperty(e)) {
+                str += "" + e + ": " + flattenAtts(a[e]) + ", ";
+            }
+        }
+        return str.replace(/(, )?$/, "}");
+    }
+}
+
 function setDetails(elem) {
     var details, strAtts, visibleRows, columns, column, str, attName, i;
     details = document.getElementById("details");
@@ -110,14 +125,14 @@ function setDetails(elem) {
     } else {
         strAtts = elem.stringAttributes();
         visibleRows = Math.floor(details.clientHeight / 16); // line-height + padding;
-        columns = Math.ceil(elem.attributes.length / visibleRows);
+        columns = Math.ceil(strAtts.attributeOrder.length / visibleRows);
         column = 0;
         str = "<table><tr>";
-        for (i in elem.attributes) {
+        for (i in strAtts.attributeOrder) {
             column += 1;
-            attName = elem.attributes[i];
+            attName = strAtts.attributeOrder[i];
             if (undefined !== strAtts[attName]) {
-                str += "<th>" + attName + "</th><td>" + strAtts[attName] + "</td>";
+                str += "<th>" + attName + "</th><td>" + flattenAtts(strAtts[attName]) + "</td>";
             } else {
                 str += "<th>" + attName + "</th><td></td>";
             }
@@ -149,6 +164,7 @@ function detailsUpdateReady() {
         } catch (err) {
             // We probably cancelled it as we were receiving data.
             model[detailsInFlight.object_type][detailsInFlight.name].details = undefined;
+            window.console.error("" + err);
         }
     }
 }
