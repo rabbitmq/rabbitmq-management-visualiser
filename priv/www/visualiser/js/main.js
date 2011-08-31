@@ -67,7 +67,7 @@ client.onreadystatechange = updateReady;
 function getChannel() {
     detailsInFlight = this;
     detailsClient.abort();
-    detailsClient.open("GET", "/api/channels/" + encodeURIComponent(this.name));
+    detailsClient.open("GET", "../api/channels/" + encodeURIComponent(this.name));
     detailsClient.send();
 }
 
@@ -78,7 +78,7 @@ function getExchange() {
     if (name === "") {
         name = "amq.default";
     }
-    detailsClient.open("GET", "/api/exchanges/" + encodeURIComponent(this.vhost) +
+    detailsClient.open("GET", "../api/exchanges/" + encodeURIComponent(this.vhost) +
                        "/" + encodeURIComponent(name));
     detailsClient.send();
 }
@@ -86,7 +86,7 @@ function getExchange() {
 function getQueue() {
     detailsInFlight = this;
     detailsClient.abort();
-    detailsClient.open("GET", "/api/queues/" + encodeURIComponent(this.vhost) +
+    detailsClient.open("GET", "../api/queues/" + encodeURIComponent(this.vhost) +
                        "/" + encodeURIComponent(this.name));
     detailsClient.send();
 }
@@ -164,7 +164,7 @@ function detailsUpdateReady() {
         } catch (err) {
             // We probably cancelled it as we were receiving data.
             model[detailsInFlight.object_type][detailsInFlight.name].details = undefined;
-            window.console.error("" + err);
+            window.console.info("" + err);
         }
     }
 }
@@ -296,6 +296,11 @@ function initCanvas(canvas) {
         } else {
             mouseDown = true;
             mouseDragOffsetVec = undefined;
+        }
+    };
+    canvas.ondblclick = function (e) {
+        if (undefined !== hoveringOver) {
+            hoveringOver.navigateTo();
         }
     };
     canvas.onmouseup = function (e) {
@@ -520,7 +525,7 @@ function enable_fun(type, postFun) {
         if (model.rendering[type].enabled) {
             delete model.rendering[type].on_enable[this.name];
         }
-        this.remove = this.__proto__.remove;
+        this.remove = Object.getPrototypeOf(this).remove;
         this.postFun = postFun;
         this.postFun(model);
     };

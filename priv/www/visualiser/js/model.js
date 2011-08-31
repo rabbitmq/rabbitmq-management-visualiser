@@ -160,16 +160,18 @@ Channel.prototype = {
     xIncr : 50,
     xMax : 200,
     yBoundary : 200,
-    attributes : ['acks_uncommitted', 'client_flow_blocked', 'confirm', 'connection_details',
-                  'consumer_count', 'message_stats', 'messages_unacknowledged',
-                  'messages_unconfirmed', 'node', 'number', 'prefetch_count', 'transactional',
-                  'user', 'vhost'],
+    attributes : [ 'acks_uncommitted', 'client_flow_blocked', 'confirm', 'connection_details',
+                   'consumer_count', 'message_stats', 'messages_unacknowledged',
+                   'messages_unconfirmed', 'node', 'number', 'prefetch_count', 'transactional',
+                   'user', 'vhost' ],
     pos : vec3.create(),
     fontSize : 12,
     spring : new Spring(),
     details : undefined,
     object_type : 'channel',
-    detail_attributes : Channel.prototype.attributes
+    detail_attributes : [ 'name', 'user', 'transactional', 'confirm', 'node', 'vhost',
+                          'prefetch_count', 'messages_unacknowledged', 'messages_unconfirmed',
+                          'consumer_count', 'client_flow_blocked' ]
 };
 Channel.prototype.spring.octtreeLimit = 10;
 Channel.prototype.spring.octtreeRadius = 500;
@@ -281,17 +283,36 @@ Channel.prototype.enable = function (model) {
 Channel.prototype.getDetails = function () {
 };
 Channel.prototype.stringAttributes = function () {
-    var obj, i, attName;
-    obj = {};
-    for (i in this.attributes) {
-        attName = this.attributes[i];
+    var obj, i, attName, attNameTitle;
+    obj = { Channel : '',
+            attributeOrder : ['Channel'] };
+    for (i in this.detail_attributes) {
+        attName = this.detail_attributes[i];
+        attNameTitle = attName.toTitleCase();
+        obj.attributeOrder.push(attNameTitle);
         if ("object" === typeof this[attName]) {
-            obj[attName] = stringifyObject(this[attName]);
+            obj[attNameTitle] = stringifyObject(this[attName]);
         } else {
-            obj[attName] = "" + this[attName];
+            obj[attNameTitle] = "" + this[attName];
         }
     }
+
+    if (undefined !== this.message_stats) {
+        if (undefined !== this.message_stats.deliver_get_details) {
+            obj.attributeOrder.push('Delivery and Get Rate (msgs/sec)');
+            obj['Delivery and Get Rate (msgs/sec)'] = "" + Math.round(this.message_stats.deliver_get_details.rate);
+        }
+
+        if (undefined !== this.message_stats.ack_details) {
+            obj.attributeOrder.push('Delivery Acknowledgement Rate (acks/sec)');
+            obj['Delivery Acknowledgement Rate (acks/sec)'] = "" + Math.round(this.message_stats.ack_details.rate);
+        }
+    }
+
     return obj;
+};
+Channel.prototype.navigateTo = function () {
+    document.location = "../#/channels/" + encodeURIComponent(this.name);
 };
 
 function Exchange(tree, elem, model) {
@@ -456,27 +477,38 @@ Exchange.prototype.stringAttributes = function () {
         }
     }
 
+    obj.attributeOrder.push('Outgoing Queue Bindings');
+    obj['Outgoing Queue Bindings'] = "" + Object.keys(this.bindings_outbound.queue).length;
+
+    obj.attributeOrder.push('Outgoing Exchange Bindings');
+    obj['Outgoing Exchange Bindings'] = "" + Object.keys(this.bindings_outbound.exchange).length;
+
+    obj.attributeOrder.push('Incoming Exchange Bindings');
+    obj['Incoming Exchange Bindings'] = "" + Object.keys(this.bindings_inbound).length;
+
     if (undefined !== this.message_stats_in &&
-        undefined !== this.message_stats_in.publish &&
         undefined !== this.message_stats_in.publish_details) {
         obj.attributeOrder.push('Message Incoming Rate (msgs/sec)');
-        obj['Message Incoming Rate (msgs/sec)'] = "" + this.message_stats_in.publish_details.rate;
-
-        obj.attributeOrder.push('Total messages received');
-        obj['Total messages received'] = "" + this.message_stats_in.publish;
+        obj['Message Incoming Rate (msgs/sec)'] = "" + Math.round(this.message_stats_in.publish_details.rate);
     }
 
     if (undefined !== this.message_stats_out &&
-        undefined !== this.message_stats_out.publish &&
         undefined !== this.message_stats_out.publish_details) {
         obj.attributeOrder.push('Message Outgoing Rate (msgs/sec)');
-        obj['Message Outgoing Rate (msgs/sec)'] = "" + this.message_stats_out.publish_details.rate;
-
-        obj.attributeOrder.push('Total messages routed');
-        obj['Total messages routed'] = "" + this.message_stats_out.publish;
+        obj['Message Outgoing Rate (msgs/sec)'] = "" + Math.round(this.message_stats_out.publish_details.rate);
     }
 
     return obj;
+};
+Exchange.prototype.navigateTo = function () {
+    var name;
+    if (this.name === "") {
+        name = "amq.default";
+    } else {
+        name = this.name;
+    }
+    document.location = "../#/exchanges/" + encodeURIComponent(this.vhost) +
+        "/" + encodeURIComponent(name);
 };
 
 function Queue(tree, elem, model) {
@@ -507,13 +539,14 @@ Queue.prototype = {
     xBoundary : 300,
     attributes : [ 'arguments', 'auto_delete', 'durable', 'messages',
                    'messages_ready', 'messages_unacknowledged', 'message_stats',
-                   'node', 'owner_pid_details', 'vhost' ],
+                   'node', 'owner_pid_details', 'vhost', 'memory', 'consumers' ],
     pos : vec3.create(),
     fontSize : 12,
     spring : new Spring(),
     details : undefined,
     object_type : 'queue',
-    detail_attributes : Queue.prototype.attributes
+    detail_attributes : [ 'name', 'durable', 'auto_delete', 'arguments', 'node', 'vhost',
+                          'messages_ready', 'messages_unacknowledged', 'consumers', 'memory' ]
 };
 Queue.prototype.spring.octtreeLimit = 10;
 Queue.prototype.spring.octtreeRadius = 500;
@@ -611,17 +644,45 @@ Queue.prototype.enable = function (model) {
 Queue.prototype.getDetails = function () {
 };
 Queue.prototype.stringAttributes = function () {
-    var obj, i, attName;
-    obj = {};
-    for (i in this.attributes) {
-        attName = this.attributes[i];
+    var obj, i, attName, attNameTitle;
+    obj = { Queue : '',
+            attributeOrder : ['Queue'] };
+    for (i in this.detail_attributes) {
+        attName = this.detail_attributes[i];
+        attNameTitle = attName.toTitleCase();
+        obj.attributeOrder.push(attNameTitle);
         if ("object" === typeof this[attName]) {
-            obj[attName] = stringifyObject(this[attName]);
+            obj[attNameTitle] = stringifyObject(this[attName]);
         } else {
-            obj[attName] = "" + this[attName];
+            obj[attNameTitle] = "" + this[attName];
         }
     }
+
+    obj.attributeOrder.push('Incoming Exchange Bindings');
+    obj['Incoming Exchange Bindings'] = "" + Object.keys(this.bindings_inbound).length;
+
+    if (undefined !== this.message_stats) {
+        if (undefined !== this.message_stats.publish_details) {
+            obj.attributeOrder.push('Message Incoming Rate (msgs/sec)');
+            obj['Message Incoming Rate (msgs/sec)'] = "" + Math.round(this.message_stats.publish_details.rate);
+        }
+
+        if (undefined !== this.message_stats.deliver_get_details) {
+            obj.attributeOrder.push('Delivery and Get Rate (msgs/sec)');
+            obj['Delivery and Get Rate (msgs/sec)'] = "" + Math.round(this.message_stats.deliver_get_details.rate);
+        }
+
+        if (undefined !== this.message_stats.ack_details) {
+            obj.attributeOrder.push('Delivery Acknowledgement Rate (acks/sec)');
+            obj['Delivery Acknowledgement Rate (acks/sec)'] = "" + Math.round(this.message_stats.ack_details.rate);
+        }
+    }
+
     return obj;
+};
+Queue.prototype.navigateTo = function () {
+    document.location = "../#/queues/" + encodeURIComponent(this.vhost) +
+        "/" + encodeURIComponent(this.name);
 };
 
 function Binding(elems) {
