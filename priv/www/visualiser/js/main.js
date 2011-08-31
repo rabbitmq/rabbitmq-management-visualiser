@@ -68,36 +68,16 @@ function updateReady() {
 }
 client.onreadystatechange = updateReady;
 
-function getChannel() {
+function getDetails() {
     detailsInFlight = this;
     detailsClient.abort();
-    detailsClient.open("GET", "../api/channels/" + encodeURIComponent(this.name));
+    detailsClient.open("GET", "../api" + this.url());
     detailsClient.send();
 }
 
-function getExchange() {
-    detailsInFlight = this;
-    detailsClient.abort();
-    var name = this.name;
-    if (name === "") {
-        name = "amq.default";
-    }
-    detailsClient.open("GET", "../api/exchanges/" + encodeURIComponent(this.vhost) +
-                       "/" + encodeURIComponent(name));
-    detailsClient.send();
-}
-
-function getQueue() {
-    detailsInFlight = this;
-    detailsClient.abort();
-    detailsClient.open("GET", "../api/queues/" + encodeURIComponent(this.vhost) +
-                       "/" + encodeURIComponent(this.name));
-    detailsClient.send();
-}
-
-Channel.prototype.getDetails = getChannel;
-Exchange.prototype.getDetails = getExchange;
-Queue.prototype.getDetails = getQueue;
+Channel.prototype.getDetails = getDetails;
+Exchange.prototype.getDetails = getDetails;
+Queue.prototype.getDetails = getDetails;
 
 function repeatGetDetails() {
     if (undefined !== hoveringOver) {

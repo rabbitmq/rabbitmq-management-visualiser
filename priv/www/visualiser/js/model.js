@@ -311,8 +311,11 @@ Channel.prototype.stringAttributes = function () {
 
     return obj;
 };
+Channel.prototype.url = function () {
+    return "/channels/" + encodeURIComponent(this.name);
+};
 Channel.prototype.navigateTo = function () {
-    document.location = "../#/channels/" + encodeURIComponent(this.name);
+    document.location = "../#" + this.url();
 };
 
 function Exchange(tree, elem, model) {
@@ -500,15 +503,18 @@ Exchange.prototype.stringAttributes = function () {
 
     return obj;
 };
-Exchange.prototype.navigateTo = function () {
+Exchange.prototype.url = function () {
     var name;
     if (this.name === "") {
         name = "amq.default";
     } else {
         name = this.name;
     }
-    document.location = "../#/exchanges/" + encodeURIComponent(this.vhost) +
+    return "/exchanges/" + encodeURIComponent(this.vhost) +
         "/" + encodeURIComponent(name);
+};
+Exchange.prototype.navigateTo = function () {
+    document.location = "../#" + this.url();
 };
 
 function Queue(tree, elem, model) {
@@ -680,9 +686,12 @@ Queue.prototype.stringAttributes = function () {
 
     return obj;
 };
-Queue.prototype.navigateTo = function () {
-    document.location = "../#/queues/" + encodeURIComponent(this.vhost) +
+Queue.prototype.url = function () {
+    return "/queues/" + encodeURIComponent(this.vhost) +
         "/" + encodeURIComponent(this.name);
+};
+Queue.prototype.navigateTo = function () {
+    document.location = "../#" + this.url();
 };
 
 function Binding(elems) {
