@@ -4,7 +4,7 @@
 var tree = octtree.create(0, 10000, 0, 1000000, -0.5, 2);
 var updatePeriod = 1000; // 1 second
 
-var configuration, detailsInFlight, mouseDragOffsetVec, hoveringOver, dragging, selectedVhost, ctx, canvas;
+var configuration, detailsInFlight, mouseDragOffsetVec, hoveringOver, dragging, selectedVhost, ctx, canvas, tick, mouseMove, setCanvasMousemove, requestAnimFrame;
 
 var client = new XMLHttpRequest();
 
@@ -60,6 +60,9 @@ function updateReady() {
         setTimeout(update, updatePeriod);
         configuration = JSON.parse(client.responseText);
         model.rebuild(tree, configuration);
+        if (!rendering) {
+            requestAnimFrame(tick);
+        }
     }
 }
 client.onreadystatechange = updateReady;
@@ -175,7 +178,7 @@ detailsClient.onreadystatechange = detailsUpdateReady;
  * Rendering / animation                                                      *
  ******************************************************************************/
 
-var requestAnimFrame = (function () {
+requestAnimFrame = (function () {
     return (this.requestAnimationFrame ||
             this.webkitRequestAnimationFrame ||
             this.mozRequestAnimationFrame ||
@@ -185,16 +188,6 @@ var requestAnimFrame = (function () {
                 setTimeout(callback, 1000 / 60);
             });
 })();
-
-// Used to start/stop doing work when we gain/lose focus
-function enableRendering() {
-    lastTime = 0;
-    rendering = true;
-}
-
-function disableRendering() {
-    rendering = false;
-}
 
 function recordMousePos(e) {
     var x, y;
@@ -206,7 +199,6 @@ function recordMousePos(e) {
     mousePos[octtree.y] = y;
 }
 
-var mouseMove, setCanvasMousemove;
 mouseMove = function (e) {
     recordMousePos(e);
     canvas.onmousemove = undefined;
@@ -214,7 +206,9 @@ mouseMove = function (e) {
 };
 
 setCanvasMousemove = function () {
-    canvas.onmousemove = mouseMove;
+    if (rendering) {
+        canvas.onmousemove = mouseMove;
+    }
 };
 
 function resizeCanvas() {
@@ -344,7 +338,7 @@ function drawScene() {
 function animate() {
     var timeNow, elapsed, e, i;
     timeNow = new Date().getTime();
-    if (lastTime !== 0 && rendering) {
+    if (lastTime !== 0) {
         elapsed = (timeNow - lastTime) / 10000;
         for (i in model.exchange) {
             e = model.exchange[i];
@@ -378,17 +372,32 @@ function animate() {
     lastTime = timeNow;
 }
 
-function tick() {
+tick = function () {
     drawScene();
     animate();
-    requestAnimFrame(tick);
-}
+    if (rendering) {
+        requestAnimFrame(tick);
+    }
+};
 
 function visualisationStart() {
     canvas = document.getElementById("topology_canvas");
     initCanvas();
     update();
-    tick();
+    requestAnimFrame(tick);
+}
+
+// Used to start/stop doing work when we gain/lose focus
+function enableRendering() {
+    lastTime = 0;
+    rendering = true;
+    setCanvasMousemove();
+    requestAnimFrame(tick);
+}
+
+function disableRendering() {
+    canvas.onmousemove = undefined;
+    rendering = false;
 }
 
 
