@@ -298,6 +298,11 @@ Channel.prototype.stringAttributes = function () {
     }
 
     if (undefined !== this.message_stats) {
+        if (undefined !== this.message_stats.publish_details) {
+            obj.attributeOrder.push('Publish Rate (msgs/sec)');
+            obj['Publish Rate (msgs/sec)'] = "" + Math.round(this.message_stats.publish_details.rate);
+        }
+
         if (undefined !== this.message_stats.deliver_get_details) {
             obj.attributeOrder.push('Delivery and Get Rate (msgs/sec)');
             obj['Delivery and Get Rate (msgs/sec)'] = "" + Math.round(this.message_stats.deliver_get_details.rate);
