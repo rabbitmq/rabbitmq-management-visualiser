@@ -61,6 +61,7 @@ function updateReady() {
         configuration = JSON.parse(client.responseText);
         model.rebuild(tree, configuration);
         if (!rendering) {
+            lastTime = 0;
             requestAnimFrame(tick);
         }
     }
