@@ -196,7 +196,7 @@ function disableRendering() {
     rendering = false;
 }
 
-function mouseMove(e) {
+function recordMousePos(e) {
     var x, y;
     x = e.pageX;
     y = e.pageY;
@@ -205,6 +205,17 @@ function mouseMove(e) {
     mousePos[octtree.x] = x;
     mousePos[octtree.y] = y;
 }
+
+var mouseMove, setCanvasMousemove;
+mouseMove = function (e) {
+    recordMousePos(e);
+    canvas.onmousemove = undefined;
+    setTimeout(setCanvasMousemove, 10);
+};
+
+setCanvasMousemove = function () {
+    canvas.onmousemove = mouseMove;
+};
 
 function resizeCanvas() {
     var e;
@@ -284,10 +295,11 @@ function clamp(elem) {
     }
 }
 
-function initCanvas(canvas) {
+function initCanvas() {
     resizeCanvas();
-    canvas.onmousemove = mouseMove;
+    setCanvasMousemove();
     canvas.onmousedown = function (e) {
+        recordMousePos(e);
         if (e.shiftKey && undefined !== hoveringOver) {
             model.disable(hoveringOver, tree);
             mouseDown = false;
@@ -299,11 +311,13 @@ function initCanvas(canvas) {
         }
     };
     canvas.ondblclick = function (e) {
+        recordMousePos(e);
         if (undefined !== hoveringOver) {
             hoveringOver.navigateTo();
         }
     };
     canvas.onmouseup = function (e) {
+        recordMousePos(e);
         mouseDown = false;
         mouseDragOffsetVec = undefined;
         dragging = undefined;
@@ -372,7 +386,7 @@ function tick() {
 
 function visualisationStart() {
     canvas = document.getElementById("topology_canvas");
-    initCanvas(canvas);
+    initCanvas();
     update();
     tick();
 }
