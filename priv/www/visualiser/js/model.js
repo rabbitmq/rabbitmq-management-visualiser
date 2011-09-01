@@ -1017,8 +1017,10 @@ Model.prototype.resetHighlighted = function () {
                          connection : {} };
 };
 Model.prototype.setHighlighted = function (elem) {
-    this.highlighted[elem.object_type][elem.name] = elem;
+    if (undefined !== elem) {
+        this.highlighted[elem.object_type][elem.name] = elem;
+    }
 };
 Model.prototype.isHighlighted = function (elem) {
-    return (undefined !== this.highlighted[elem.object_type][elem.name]);
+    return ((undefined !== elem) && (undefined !== this.highlighted[elem.object_type][elem.name]));
 };
