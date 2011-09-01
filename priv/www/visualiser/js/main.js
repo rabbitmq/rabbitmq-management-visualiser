@@ -48,9 +48,9 @@ var clientHeight = 0;
 
 function update() {
     if (undefined === selectedVhost) {
-        client.open("GET", "/api/all");
+        client.open("GET", "../api/all");
     } else {
-        client.open("GET", "/api/all/" + encodeURIComponent(selectedVhost));
+        client.open("GET", "../api/all/" + encodeURIComponent(selectedVhost));
     }
     client.send();
 }
