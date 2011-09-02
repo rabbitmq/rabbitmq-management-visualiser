@@ -1,26 +1,19 @@
 /*global octtree, vec3, Spring */
 
-function maxY(elem, subModel) {
-    var i;
-    elem.pos[octtree.y] = elem.yInit;
-    for (i in subModel) {
-        if (subModel[i] !== elem && ! subModel[i].disabled) {
-            elem.pos[octtree.y] =
-                Math.max(elem.pos[octtree.y],
-                         subModel[i].pos[octtree.y] + elem.yIncr);
-        }
+function searchX(elem, tree, xIncr, xMax) {
+    var found = tree.findInRadius(elem.pos, xIncr / 2, 1);
+    while (found.length > 0 && elem.pos[octtree.x] + xIncr < xMax) {
+        elem.pos[octtree.x] += xIncr;
+        found = tree.findInRadius(elem.pos, xIncr / 2, 1);
     }
+    return (found.length === 0);
 }
 
-function maxX(elem, subModel) {
-    var i;
-    elem.pos[octtree.x] = elem.xInit;
-    for (i in subModel) {
-        if (subModel[i] !== elem && ! subModel[i].disabled) {
-            elem.pos[octtree.x] =
-                Math.max(elem.pos[octtree.x],
-                         subModel[i].pos[octtree.x] + elem.xIncr);
-        }
+function searchY(elem, tree, yIncr) {
+    var found = tree.findInRadius(elem.pos, yIncr / 2, 1);
+    while (found.length > 0) {
+        elem.pos[octtree.y] += yIncr;
+        found = tree.findInRadius(elem.pos, yIncr / 2, 1);
     }
 }
 
@@ -135,14 +128,7 @@ Publisher.render = function (channel, exchange, ctx) {
 function Channel(tree, elem, model) {
     this.name = elem.name;
     this.pos = vec3.create();
-    this.pos[octtree.x] = this.xInit;
-    this.pos[octtree.y] = this.yInit;
-    this.pos[octtree.z] = 0;
-
-    maxX(this, model.channel);
-
-    this.yMin = this.pos[octtree.y];
-    this.yMax = this.pos[octtree.y];
+    this.findNewPosition(model, tree);
 
     this.next_pos = vec3.create(this.pos);
     this.mass = 0.1;
@@ -180,8 +166,21 @@ Channel.prototype.spring.dampingFactor = 0.1;
 Channel.prototype.spring.pull = true;
 Channel.prototype.spring.push = false;
 
+Channel.prototype.findNewPosition = function (model, tree) {
+    this.pos[octtree.x] = this.xInit;
+    this.pos[octtree.y] = this.yInit;
+    this.pos[octtree.z] = 0;
+
+    while (! searchX(this, tree, this.xIncr, this.xMax)) {
+        this.pos[octtree.y] += this.yIncr;
+        this.pos[octtree.x] = this.xInit + (this.pos[octtree.y] / 10);
+    }
+
+    this.yMin = this.pos[octtree.y];
+    this.yMax = this.pos[octtree.y];
+};
 Channel.prototype.canvasResized = function (canvas) {
-    Channel.prototype.xMax = canvas.width - Channel.prototype.xInit;
+    Channel.prototype.xMax = canvas.width;
 };
 Channel.prototype.update = function (elem) {
     var attr, i;
@@ -270,15 +269,9 @@ Channel.prototype.animate = function (elapsed) {
 Channel.prototype.disable = function (model) {
     model.channels_visible -= 1;
 };
-Channel.prototype.enable = function (model) {
+Channel.prototype.enable = function (model, tree) {
     model.channels_visible += 1;
-    maxX(this, model.channel);
-    this.pos[octtree.y] = this.yInit;
-    if (this.pos[octtree.x] >= this.xMax) {
-        this.pos[octtree.x] = this.xMax;
-        maxY(this, model.channel);
-        this.pos[octtree.y] += this.xIncr;
-    }
+    this.findNewPosition(model, tree);
 };
 Channel.prototype.getDetails = function () {
 };
@@ -326,15 +319,8 @@ Channel.prototype.navigateTo = function () {
 function Exchange(tree, elem, model) {
     this.name = elem.name;
     this.pos = vec3.create();
-    this.pos[octtree.x] = this.xInit;
-    this.pos[octtree.y] = this.yInit;
-    this.pos[octtree.z] = 0;
-
-    maxY(this, model.exchange);
-
+    this.findNewPosition(model, tree);
     this.next_pos = vec3.create(this.pos);
-    this.xMin = this.pos[octtree.x];
-    this.xMax = this.pos[octtree.x];
     this.mass = 0.1;
     this.velocity = vec3.create();
     this.ideal = { pos : vec3.create() };
@@ -366,6 +352,16 @@ Exchange.prototype.spring.dampingFactor = 0.1;
 Exchange.prototype.spring.pull = true;
 Exchange.prototype.spring.push = false;
 
+Exchange.prototype.findNewPosition = function (model, tree) {
+    this.pos[octtree.x] = this.xInit;
+    this.pos[octtree.y] = this.yInit;
+    this.pos[octtree.z] = 0;
+
+    searchY(this, tree, this.yIncr);
+
+    this.xMin = this.pos[octtree.x];
+    this.xMax = this.pos[octtree.x];
+};
 Exchange.prototype.canvasResized = function (canvas) {
     Exchange.prototype.xInit = canvas.width / 6;
     Exchange.prototype.xBoundary = 2 * canvas.width / 6;
@@ -463,10 +459,9 @@ Exchange.prototype.animate = function (elapsed) {
 Exchange.prototype.disable = function (model) {
     model.exchanges_visible -= 1;
 };
-Exchange.prototype.enable = function (model) {
+Exchange.prototype.enable = function (model, tree) {
     model.exchanges_visible += 1;
-    this.pos[octtree.x] = this.xInit;
-    maxY(this, model.exchange);
+    this.findNewPosition(model, tree);
 };
 Exchange.prototype.getDetails = function () {
 };
@@ -525,15 +520,8 @@ Exchange.prototype.navigateTo = function () {
 function Queue(tree, elem, model) {
     this.name = elem.name;
     this.pos = vec3.create();
-    this.pos[octtree.x] = this.xInit;
-    this.pos[octtree.y] = this.yInit;
-    this.pos[octtree.z] = 0;
-
-    maxY(this, model.queue);
-
+    this.findNewPosition(model, tree);
     this.next_pos = vec3.create(this.pos);
-    this.xMin = this.pos[octtree.x];
-    this.xMax = this.pos[octtree.x];
     this.mass = 0.1;
     this.velocity = vec3.create();
     this.ideal = { pos : vec3.create() };
@@ -566,6 +554,16 @@ Queue.prototype.spring.dampingFactor = 0.1;
 Queue.prototype.spring.pull = true;
 Queue.prototype.spring.push = false;
 
+Queue.prototype.findNewPosition = function (model, tree) {
+    this.pos[octtree.x] = this.xInit;
+    this.pos[octtree.y] = this.yInit;
+    this.pos[octtree.z] = 0;
+
+    searchY(this, tree, this.yIncr);
+
+    this.xMin = this.pos[octtree.x];
+    this.xMax = this.pos[octtree.x];
+};
 Queue.prototype.canvasResized = function (canvas) {
     Queue.prototype.xInit = 5 * canvas.width / 6;
     Queue.prototype.xBoundary = 4 * canvas.width / 6;
@@ -647,10 +645,9 @@ Queue.prototype.animate = function (elapsed) {
 Queue.prototype.disable = function (model) {
     model.queues_visible -= 1;
 };
-Queue.prototype.enable = function (model) {
+Queue.prototype.enable = function (model, tree) {
     model.queues_visible += 1;
-    this.pos[octtree.x] = this.xInit;
-    maxY(this, model.queue);
+    this.findNewPosition(model, tree);
 };
 Queue.prototype.getDetails = function () {
 };
@@ -980,7 +977,7 @@ Model.prototype.disable = function (elem, tree) {
     elem.details = undefined;
 };
 Model.prototype.enable = function (elem, tree) {
-    elem.enable(this);
+    elem.enable(this, tree);
     tree.add(elem);
     elem.disabled = false;
     elem.details = undefined;

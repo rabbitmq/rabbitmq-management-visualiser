@@ -525,19 +525,37 @@ function showQueues() {
 
 // Called when the resource is enabled from being hidden
 function enable_fun(type, postFun) {
-    return function (model) {
+    return function (model, tree) {
         if (model.rendering[type].enabled) {
             delete model.rendering[type].on_enable[this.name];
         }
         this.remove = Object.getPrototypeOf(this).remove;
         this.postFun = postFun;
-        this.postFun(model);
+        this.postFun(model, tree);
     };
 }
 
 Channel.prototype.enable = enable_fun('channel', Channel.prototype.enable);
 Exchange.prototype.enable = enable_fun('exchange', Exchange.prototype.enable);
 Queue.prototype.enable = enable_fun('queue', Queue.prototype.enable);
+
+
+// Called when the item is removed and the item is disabled
+function remove_disabled_fun(hiddenElemId, postFun) {
+    return function (tree, model) {
+        var hidden, i;
+        hidden = document.getElementById(hiddenElemId);
+        for (i = 0; i < hidden.options.length; i += 1) {
+            if (hidden.options[i].value === this.name) {
+                hidden.remove(i);
+                break;
+            }
+        }
+        model.enable(this, tree);
+        this.postFun = postFun;
+        this.postFun(tree, model);
+    };
+}
 
 function disable_fun(hiddenElemId, type, postFun) {
     return function (model) {
@@ -583,23 +601,6 @@ function remove_fun(postFun, type) {
 Channel.prototype.remove = remove_fun(Channel.prototype.remove, 'channel');
 Queue.prototype.remove = remove_fun(Queue.prototype.remove, 'queue');
 Exchange.prototype.remove = remove_fun(Exchange.prototype.remove, 'exchange');
-
-// Called when the item is removed and the item is disabled
-function remove_disabled_fun(hiddenElemId, postFun) {
-    return function (tree, model) {
-        var hidden, i;
-        hidden = document.getElementById(hiddenElemId);
-        for (i = 0; i < hidden.options.length; i += 1) {
-            if (hidden.options[i].value === this.name) {
-                hidden.remove(i);
-                break;
-            }
-        }
-        model.enable(this, tree);
-        this.postFun = postFun;
-        this.postFun(tree, model);
-    };
-}
 
 function toggleRendering(hiddenElemId, showButtonElemId, type) {
     var hidden, i, e;
