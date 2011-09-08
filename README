@@ -13,7 +13,7 @@ routing topology of the broker.
 The left of the canvas displays exchanges, the right displays queues,
 and the top displays channels. All of these items can be dragged
 around the canvas. They repel one another, and snap back into their
-predefined areas should the be released within the boundaries of those
+predefined areas should they be released within the boundaries of those
 areas.
 
 Shift-clicking on an item hides it - it will be added to the relevant
@@ -35,7 +35,7 @@ select boxes, and can be brought into the display by selecting them
 and clicking on the relevant 'Show' button.
 
 The 'Display' check-boxes turn off and on entire resource classes, and
-reset positioning.
+resets positioning.
 
 
 Compatibility and Performance Notes

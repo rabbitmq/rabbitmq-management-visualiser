@@ -628,6 +628,14 @@ function toggleRendering(hiddenElemId, showButtonElemId, type) {
     return true;
 }
 
+function displayHelp() {
+    document.getElementById('help').style.display = 'block';
+}
+
+function hideHelp() {
+    document.getElementById('help').style.display = 'none';
+}
+
 
 /******************************************************************************
  * VHost                                                                      *
