@@ -761,7 +761,6 @@ Binding.prototype.render = function (model, ctx) {
     ctx.bezierCurveTo(xCtl2, yCtl2 + 1, xCtl1, yCtl1 + 1, source.xMax,
                       source.pos[octtree.y] + 1);
     ctx.moveTo(source.xMax, source.pos[octtree.y]);
-    ctx.closePath();
     this.preStroke(source, destination, model, ctx);
 
     // draw an arrow head
