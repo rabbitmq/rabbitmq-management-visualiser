@@ -1,7 +1,0 @@
-^\.project
-^\.settings
-~$
-\.beam$
-\.app$
-^build/
-^dist/
