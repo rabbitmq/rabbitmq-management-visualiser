@@ -19,6 +19,7 @@
 -behaviour(rabbit_mgmt_extension).
 
 -export([dispatcher/0, web_ui/0]).
+
 dispatcher() -> [{["all"],        rabbit_mgmt_wm_all, []},
                  {["all", vhost], rabbit_mgmt_wm_all, []}].
 web_ui()     -> [{javascript, <<"visualiser.js">>}].
