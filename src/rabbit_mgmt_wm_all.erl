@@ -11,7 +11,7 @@
 %%   The Original Code is RabbitMQ Visualiser.
 %%
 %%   The Initial Developer of the Original Code is GoPivotal, Inc.
-%%   Copyright (c) 2011-2014 GoPivotal, Inc.  All rights reserved.
+%%   Copyright (c) 2007-2016 Pivotal Software, Inc.  All rights reserved.
 -module(rabbit_mgmt_wm_all).
 
 -export([init/1, to_json/2, content_types_provided/2, is_authorized/2,
