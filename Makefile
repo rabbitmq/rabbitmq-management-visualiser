@@ -1,6 +1,6 @@
 PROJECT = rabbitmq_management_visualiser
 
-DEPS = rabbitmq_management
+DEPS = rabbitmq_management webmachine
 
 DEP_PLUGINS = rabbit_common/mk/rabbitmq-plugin.mk
 
