@@ -1,3 +1,3 @@
 dispatcher_add(function(sammy) {});
 
-NAVIGATION['Visualiser'] = ['visualiser/', "management"];
+NAVIGATION['Visualiser'] = ['visualiser/index.html', "management"];
