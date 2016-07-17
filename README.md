@@ -1,9 +1,13 @@
-RabbitMQ Visualiser
-===================
+# RabbitMQ Visualiser
+
+This experimental plugin that visualizes RabbitMQ topology and message flow.
 
 
-Usage
------
+## Project Maturity
+
+This project was an experiment because it is no longer under development.
+
+## Usage
 
 This is a plugin for the RabbitMQ Management Plugin that provides an
 HTML Canvas for rendering configured broker topology. The current main
@@ -36,21 +40,3 @@ and clicking on the relevant 'Show' button.
 
 The 'Display' check-boxes turn off and on entire resource classes, and
 resets positioning.
-
-
-Compatibility and Performance Notes
------------------------------------
-
-Does work in recent versions of Safari both on OS X and Windows.
-
-Does work in Firefox (at least version 4.0).
-
-Does work in Chrome.
-
-Does not work in Internet Explorer. No error is given, but it doesn't
-work.
-
-Best performance is with Chrome. Note though that in some cases it has
-been seen that hardware rendering (use of GPU) can actually slow down
-performance. Some experimentation with browser flags and settings may
-be necessary to ensure smooth operation.
