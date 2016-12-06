@@ -1,6 +1,0 @@
-{application, rabbitmq_management_visualiser,
- [{description, "RabbitMQ Visualiser"},
-  {vsn, ""},
-  {modules, []},
-  {registered, []},
-  {applications, [kernel, stdlib, rabbit_common, rabbit, rabbitmq_management]}]}.

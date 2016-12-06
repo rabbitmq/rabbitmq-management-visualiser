@@ -1,4 +1,5 @@
 PROJECT = rabbitmq_management_visualiser
+PROJECT_DESCRIPTION = RabbitMQ Visualiser
 
 DEPS = rabbit_common rabbit rabbitmq_management
 
