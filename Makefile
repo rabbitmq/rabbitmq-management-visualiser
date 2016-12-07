@@ -1,4 +1,9 @@
 PROJECT = rabbitmq_management_visualiser
+PROJECT_DESCRIPTION = RabbitMQ Visualiser
+
+define PROJECT_APP_EXTRA_KEYS
+	{broker_version_requirements, []}
+endef
 
 DEPS = rabbit_common rabbit rabbitmq_management
 
