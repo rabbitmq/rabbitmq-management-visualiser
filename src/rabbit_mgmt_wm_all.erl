@@ -39,14 +39,16 @@ resource_exists(ReqData, Context) ->
 
 to_json(ReqData, Context) ->
     rabbit_mgmt_util:reply(
-      [{Key, Mod:augmented(ReqData, Context)}
-       || {Key, Mod} <- [{queues,      rabbit_mgmt_wm_queues},
-                         {exchanges,   rabbit_mgmt_wm_exchanges},
-                         {bindings,    rabbit_mgmt_wm_bindings},
-                         {channels,    rabbit_mgmt_wm_channels},
-                         {connections, rabbit_mgmt_wm_connections},
-                         {vhosts,      rabbit_mgmt_wm_vhosts}]
-      ], ReqData, Context).
+      rabbit_mgmt_format:strip_pids(
+        [{Key, Mod:augmented(ReqData, Context)}
+         || {Key, Mod} <- [{queues,      rabbit_mgmt_wm_queues},
+                           {exchanges,   rabbit_mgmt_wm_exchanges},
+                           {bindings,    rabbit_mgmt_wm_bindings},
+                           {channels,    rabbit_mgmt_wm_channels},
+                           {connections, rabbit_mgmt_wm_connections},
+                           {vhosts,      rabbit_mgmt_wm_vhosts}]
+        ]),
+      ReqData, Context).
 
 is_authorized(ReqData, Context) ->
     rabbit_mgmt_util:is_authorized(ReqData, Context).
