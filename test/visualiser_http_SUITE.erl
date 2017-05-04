@@ -21,7 +21,7 @@
 -include_lib("common_test/include/ct.hrl").
 -include_lib("rabbitmq_ct_helpers/include/rabbit_mgmt_test.hrl").
 
--import(rabbit_mgmt_test_util, [http_get/2, http_put/4, http_delete/3, http_post/4, assert_list/2]).
+-import(rabbit_mgmt_test_util, [http_get/2, http_put/4, http_post/4, assert_list/2]).
 
 -define(COLLECT_INTERVAL, 1000).
 
