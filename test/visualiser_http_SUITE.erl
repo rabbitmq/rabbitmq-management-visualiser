@@ -21,7 +21,7 @@
 -include_lib("common_test/include/ct.hrl").
 -include_lib("rabbitmq_ct_helpers/include/rabbit_mgmt_test.hrl").
 
--import(rabbit_mgmt_test_util, [http_get/2, http_put/4, http_delete/3, http_post/4, assert_list/2]).
+-import(rabbit_mgmt_test_util, [http_get/2, http_put/4, http_post/4, assert_list/2]).
 
 -define(COLLECT_INTERVAL, 1000).
 
@@ -36,12 +36,10 @@ init_per_suite(Config) ->
                                                    ]),
     Config2 = merge_app_env(Config1),
     rabbit_ct_helpers:run_setup_steps(Config2,
-                      rabbit_ct_broker_helpers:setup_steps() ++
-                      rabbit_ct_client_helpers:setup_steps()).
+                      rabbit_ct_broker_helpers:setup_steps()).
 end_per_suite(Config) ->
-    rabbit_ct_helpers:run_teardown_steps(Config,
-                                         rabbit_ct_client_helpers:teardown_steps() ++
-                                             rabbit_ct_broker_helpers:teardown_steps()).
+    rabbit_ct_helpers:run_teardown_steps(
+      Config, rabbit_ct_broker_helpers:teardown_steps()).
 
 merge_app_env(Config) ->
     Config1 = rabbit_ct_helpers:merge_app_env(Config,
@@ -71,7 +69,8 @@ prepare_topology(Config) ->
                  {<<"test_vhost2">>, <<"exchange_fanout">>, <<"fanout">>}],
     Bindings = [{<<"test_vhost1">>, <<"exchange_direct">>, <<"queue1">>, <<"rk">>, <<"rk">>},
                 {<<"test_vhost2">>, <<"exchange_fanout">>, <<"queue3">>, <<>>, <<$~>>}],
-    Topology = [{queues, top_queues(Queues)},
+    Topology = [{vhosts, Vhosts},
+                {queues, top_queues(Queues)},
                 {exchanges, top_exchanges(Vhosts, Exchanges)},
                 {bindings, top_bindings(Queues, Bindings)}],
     create_vhosts(Config, Vhosts),
