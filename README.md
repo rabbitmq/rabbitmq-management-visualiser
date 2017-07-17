@@ -1,6 +1,7 @@
 # RabbitMQ Visualiser
 
 This experimental plugin that visualizes RabbitMQ topology and message flow.
+It is **DEPRECATED** and will not ship with RabbitMQ as of 3.7.0.
 
 
 ## Project Maturity
