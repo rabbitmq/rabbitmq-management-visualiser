@@ -75,8 +75,15 @@ function update() {
 
 function updateReady(resp) {
     var configuration = jQuery.parseJSON(resp.responseText);
-    set_update_timeout();
+    if(undefined === selectedVhost) {
+        if(undefined !== configuration.vhosts[0]){
+            selectedVhost = configuration.vhosts[0].name;
+            update();
+            return;
+        }
+    }
     model.rebuild(tree, configuration);
+    set_update_timeout();
     if (!rendering) {
         lastTime = 0;
         requestAnimFrame(tick);
@@ -730,5 +737,6 @@ this.vhostChanged = function() {
             break;
         }
     }
+    update();
 }
 }
