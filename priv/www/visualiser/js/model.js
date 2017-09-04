@@ -332,7 +332,7 @@ function Exchange(tree, elem, model) {
 }
 
 Exchange.prototype = {
-    yInit : 250,
+    yInit : 50,
     yIncr : 50,
     xInit : 100,
     xBoundary : 200,
@@ -532,7 +532,7 @@ function Queue(tree, elem, model) {
 }
 
 Queue.prototype = {
-    yInit : 250,
+    yInit : 50,
     yIncr : 50,
     xInit : 400,
     xBoundary : 300,
@@ -1020,3 +1020,4 @@ Model.prototype.setHighlighted = function (elem) {
 Model.prototype.isHighlighted = function (elem) {
     return ((undefined !== elem) && (undefined !== this.highlighted[elem.object_type][elem.name]));
 };
+
