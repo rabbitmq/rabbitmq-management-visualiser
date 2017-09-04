@@ -140,7 +140,7 @@ function Channel(tree, elem, model) {
 }
 
 Channel.prototype = {
-    yInit : 100,
+    yInit : 120,
     yIncr : 50,
     xInit : 100,
     xIncr : 50,
