@@ -69,10 +69,10 @@ prepare_topology(Config) ->
                  {<<"test_vhost2">>, <<"exchange_fanout">>, <<"fanout">>}],
     Bindings = [{<<"test_vhost1">>, <<"exchange_direct">>, <<"queue1">>, <<"rk">>, <<"rk">>},
                 {<<"test_vhost2">>, <<"exchange_fanout">>, <<"queue3">>, <<>>, <<$~>>}],
-    Topology = [{vhosts, Vhosts},
-                {queues, top_queues(Queues)},
-                {exchanges, top_exchanges(Vhosts, Exchanges)},
-                {bindings, top_bindings(Queues, Bindings)}],
+    Topology = #{vhosts => Vhosts,
+                 queues => top_queues(Queues),
+                 exchanges => top_exchanges(Vhosts, Exchanges),
+                 bindings => top_bindings(Queues, Bindings)},
     create_vhosts(Config, Vhosts),
     create_queues(Config, Queues),
     create_exchanges(Config, Exchanges),
@@ -81,7 +81,7 @@ prepare_topology(Config) ->
 
 drop_topology(Config) ->
     Topology = ?config(topology, Config),
-    Vhosts = proplists:get_value(vhosts, Topology),
+    Vhosts = maps:get(vhosts, Topology),
     drop_vhosts(Config, Vhosts),
     Config.
 
@@ -120,48 +120,48 @@ drop_vhosts(Config, Vhosts) ->
     end, Vhosts).
 
 top_queues(Queues) ->
-    [ [{name,        Queue},
-       {vhost,       Vhost},
-       {durable,     true},
-       {auto_delete, false},
-       {exclusive,   false},
-       {arguments,   []}] || {Vhost, Queue} <- Queues ].
+    [ #{name =>        Queue,
+        vhost =>       Vhost,
+        durable =>     true,
+        auto_delete => false,
+        exclusive =>   false,
+        arguments =>   #{}} || {Vhost, Queue} <- Queues ].
 
 top_exchanges(Vhosts, Exchanges) ->
     default_exchanges(Vhosts) ++
-    [[{name,Exchange},
-      {vhost,Vhost},
-      {type,Type},
-      {durable,true},
-      {auto_delete,false},
-      {internal,false},
-      {arguments,[]}] || {Vhost, Exchange, Type} <- Exchanges ].
+    [#{name =>        Exchange,
+       vhost =>       Vhost,
+       type =>        Type,
+       durable =>     true,
+       auto_delete => false,
+       internal =>    false,
+       arguments =>   #{}} || {Vhost, Exchange, Type} <- Exchanges ].
 
 default_exchanges(Vhosts) ->
-    [[{name,Exchange},
-      {vhost,Vhost},
-      {type,Type},
-      {durable,true},
-      {auto_delete,false},
-      {internal,false},
-      {arguments,[]}]
+    [#{name => Exchange,
+       vhost => Vhost,
+       type => Type,
+       durable => true,
+       auto_delete => false,
+       internal => false,
+       arguments => #{}}
      || {Exchange, Type} <- default_exchanges(),
         Vhost <- Vhosts] ++
-     [[{name,<<"amq.rabbitmq.trace">>},
-      {vhost,Vhost},
-      {type,<<"topic">>},
-      {durable,true},
-      {auto_delete,false},
-      {internal,true},
-      {arguments,[]}]
+     [#{name => <<"amq.rabbitmq.trace">>,
+        vhost => Vhost,
+        type => <<"topic">>,
+        durable => true,
+        auto_delete => false,
+        internal => true,
+        arguments => #{}}
       || Vhost <- Vhosts ] ++
-     [[{name,<<"amq.rabbitmq.log">>},
-      {vhost,<<"/">>},
-      {type,<<"topic">>},
-      {durable,true},
-      {auto_delete,false},
-      {internal,true},
-      {arguments,[]}]].
+     [#{name => <<"amq.rabbitmq.log">>,
+        vhost => <<"/">>,
+        type => <<"topic">>,
+        durable => true,
+        auto_delete => false,
+        internal => true,
+        arguments => #{}}].
 
 default_exchanges() ->
     [{<<>>, <<"direct">>},
@@ -173,31 +173,31 @@ default_exchanges() ->
 
 top_bindings(Queues, Bindings) ->
     default_bindings(Queues) ++
-    [[{source,Exchange},
-      {vhost,Vhost},
-      {destination,Queue},
-      {destination_type,<<"queue">>},
-      {routing_key,RoutingKey},
-      {arguments,[]},
-      {properties_key,PropKey}]
+    [#{source => Exchange,
+       vhost => Vhost,
+       destination => Queue,
+       destination_type => <<"queue">>,
+       routing_key => RoutingKey,
+       arguments => #{},
+       properties_key => PropKey}
      || {Vhost, Exchange, Queue, RoutingKey, PropKey} <- Bindings].
 
 default_bindings(Queues) ->
-    [[{source,<<>>},
-      {vhost,Vhost},
-      {destination,Queue},
-      {destination_type,<<"queue">>},
-      {routing_key,Queue},
-      {arguments,[]},
-      {properties_key,Queue}]
+    [#{source => <<>>,
+       vhost => Vhost,
+       destination => Queue,
+       destination_type => <<"queue">>,
+       routing_key => Queue,
+       arguments => #{},
+       properties_key => Queue}
      || {Vhost, Queue} <- Queues].
 
 all_request(Config) ->
     Topology = ?config(topology, Config),
     All = http_get(Config, "/all"),
-    Queues = proplists:get_value(queues, All),
-    Exchanges = proplists:get_value(exchanges, All),
-    Bindings = proplists:get_value(bindings, All),
-    assert_list(proplists:get_value(queues, Topology), Queues),
-    assert_list(proplists:get_value(exchanges, Topology), Exchanges),
-    assert_list(proplists:get_value(bindings, Topology), Bindings).
+    Queues = maps:get(queues, All),
+    Exchanges = maps:get(exchanges, All),
+    Bindings = maps:get(bindings, All),
+    assert_list(maps:get(queues, Topology), Queues),
+    assert_list(maps:get(exchanges, Topology), Exchanges),
+    assert_list(maps:get(bindings, Topology), Bindings).
